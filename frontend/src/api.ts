@@ -1,7 +1,7 @@
 // frontend/src/api.ts
 // Central API client for the Hippocrates Django backend
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = 'http://localhost:8000/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

@@ -82,10 +82,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # CORS — allow the React dev server
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-]
+CORS_ALLOW_ALL_ORIGINS = True
 
 # DRF defaults
 REST_FRAMEWORK = {
