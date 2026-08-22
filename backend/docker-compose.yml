@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: hippocrates_db
+    restart: always
+    environment:
+      POSTGRES_DB: hippocrates
+      POSTGRES_USER: hippo_user
+      POSTGRES_PASSWORD: hippo_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
