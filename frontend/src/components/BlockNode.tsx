@@ -2,7 +2,7 @@ import React from 'react';
 import type { Block } from '../store/useStore';
 
 interface BlockNodeProps {
-  block: Block & { children?: Block[] };
+  block: Block & { children?: (Block & { children?: any[] })[] };
 }
 
 export const BlockNode: React.FC<BlockNodeProps> = ({ block }) => {
@@ -10,8 +10,12 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ block }) => {
 
   const renderContent = () => {
     switch (block_type) {
-      case 'heading':
+      case 'heading_1':
+        return <h2 className="font-display-sm text-on-surface mb-xs mt-xl">{text}</h2>;
+      case 'heading_2':
         return <h3 className="font-headline-md text-on-surface mb-xs mt-lg">{text}</h3>;
+      case 'heading_3':
+        return <h4 className="font-headline-sm text-on-surface-variant mb-xs mt-md">{text}</h4>;
       case 'paragraph':
         return <p className="mb-md text-body-lg text-on-surface leading-relaxed">{text}</p>;
       case 'list_item':
