@@ -70,11 +70,11 @@ def parse_docx(material: Material) -> int:
     docx = DocxDocument(material.file.path)
 
     # Track the most recently seen block at each heading level
-    # {1: Block|None, 2: Block|None, 3: Block|None}
     heading_stack: dict[int, Block | None] = {1: None, 2: None, 3: None}
 
     global_order = 0   # monotonically increasing order across all blocks
     blocks_created = 0
+    last_block = None  # track the last created block to group consecutive paragraphs/lists
 
     for para in docx.paragraphs:
         text = para.text.strip()
@@ -97,22 +97,29 @@ def parse_docx(material: Material) -> int:
             # Paragraph / list item — child of deepest recent heading
             parent = heading_stack[3] or heading_stack[2] or heading_stack[1]
 
-        block = Block.objects.create(
-            material=material,
-            parent=parent,
-            order=global_order,
-            block_type=block_type,
-            text=text,
-        )
+        # Group consecutive paragraphs or list items under the same parent
+        if level > 3 and last_block and last_block.block_type == block_type and last_block.parent == parent:
+            separator = "\n" if block_type == Block.BlockType.LIST_ITEM else "\n\n"
+            last_block.text += f"{separator}{text}"
+            last_block.save(update_fields=['text'])
+        else:
+            block = Block.objects.create(
+                material=material,
+                parent=parent,
+                order=global_order,
+                block_type=block_type,
+                text=text,
+            )
+            last_block = block
 
-        # Update heading stack for subsequent blocks
-        if level <= 3:
-            heading_stack[level] = block
-            # Invalidate deeper levels when a shallower heading appears
-            for deeper in range(level + 1, 4):
-                heading_stack[deeper] = None
+            # Update heading stack for subsequent blocks
+            if level <= 3:
+                heading_stack[level] = block
+                # Invalidate deeper levels when a shallower heading appears
+                for deeper in range(level + 1, 4):
+                    heading_stack[deeper] = None
 
-        global_order += 1
-        blocks_created += 1
+            global_order += 1
+            blocks_created += 1
 
     return blocks_created

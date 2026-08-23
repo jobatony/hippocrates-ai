@@ -17,9 +17,21 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ block }) => {
       case 'heading_3':
         return <h4 className="font-headline-sm text-on-surface-variant mb-xs mt-md">{text}</h4>;
       case 'paragraph':
-        return <p className="mb-md text-body-lg text-on-surface leading-relaxed">{text}</p>;
+        return (
+          <>
+            {text.split('\n\n').map((pText, i) => (
+              <p key={i} className="mb-md text-body-lg text-on-surface leading-relaxed">{pText}</p>
+            ))}
+          </>
+        );
       case 'list_item':
-        return <li className="ml-md list-disc text-body-lg text-on-surface">{text}</li>;
+        return (
+          <ul className="ml-md list-disc text-body-lg text-on-surface mb-md">
+            {text.split('\n').map((lText, i) => (
+              <li key={i}>{lText}</li>
+            ))}
+          </ul>
+        );
       default:
         return <p className="mb-md text-body-lg">{text}</p>;
     }
