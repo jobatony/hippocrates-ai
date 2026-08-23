@@ -212,7 +212,14 @@ export const Layout: React.FC = () => {
                   type="file"
                   accept=".docx"
                   className="hidden"
-                  onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                  onChange={e => {
+                    const file = e.target.files?.[0] || null;
+                    setUploadFile(file);
+                    if (file && !uploadTitle.trim()) {
+                      // Auto-fill title using filename (removing .docx)
+                      setUploadTitle(file.name.replace(/\.docx?$/i, ''));
+                    }
+                  }}
                   required
                 />
               </div>
