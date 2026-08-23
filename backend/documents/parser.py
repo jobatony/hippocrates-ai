@@ -7,6 +7,7 @@ Call: parse_docx(material_instance)
 
 from docx import Document as DocxDocument
 from docx.oxml.ns import qn
+import re
 
 from .models import Block, Material
 
@@ -26,18 +27,35 @@ LIST_STYLES = {'List Paragraph', 'List Bullet', 'List Number'}
 
 def _get_block_type(para) -> str:
     """
-    Determine the block type of a python-docx paragraph.
+    Determine the block type of a python-docx paragraph using styles, deep XML, and text fallbacks.
     """
     style_name = para.style.name if para.style else ''
 
+    # 1. Exact heading match
     if style_name in HEADING_STYLE_MAP:
         return HEADING_STYLE_MAP[style_name]
 
-    if style_name in LIST_STYLES:
+    # 2. Broad style name match (e.g., 'List', 'List Bullet 2', 'Numbering')
+    style_lower = style_name.lower()
+    if 'list' in style_lower or 'bullet' in style_lower or 'number' in style_lower:
         return Block.BlockType.LIST_ITEM
 
-    # Detect list by XML numPr element (catches unstyled lists)
-    if para._element.find(qn('w:numPr')) is not None:
+    # 3. Deep XML search for list tags (catches deeply nested properties)
+    if len(para._element.xpath('.//w:numPr')) > 0:
+        return Block.BlockType.LIST_ITEM
+
+    # 4. Fallback: Detect manual lists via text matching
+    text = para.text.strip()
+    
+    # Standard bullet characters
+    bullet_chars = ('•', '○', '▪', '-', '*', '➢', '✓', '—', '–')
+    for char in bullet_chars:
+        # Check if it starts with the character followed by space or tab
+        if text.startswith(char + ' ') or text.startswith(char + '\t'):
+            return Block.BlockType.LIST_ITEM
+
+    # Numbering patterns: e.g., "1. ", "a. ", "I. ", "1) ", "a) "
+    if re.match(r'^(\d{1,3}|[a-zA-Z]|[IVXLCDMivxlcdm]{1,5})[\.\)]\s+', text):
         return Block.BlockType.LIST_ITEM
 
     return Block.BlockType.PARAGRAPH
