@@ -3,8 +3,7 @@
 
 import type { Question } from './store/useStore';
 
-const host = window.location.hostname;
-const BASE_URL = `http://${host}:8000/api`;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // ─── Auth Token Helpers ───────────────────────────────────────────────────────
 
