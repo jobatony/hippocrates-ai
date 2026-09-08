@@ -21,10 +21,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third party
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     # Local
     'documents',
+    'quiz',
+    'accounts',
 ]
+
+AUTH_USER_MODEL = 'accounts.User'
+
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',   # must be FIRST
@@ -58,8 +65,12 @@ WSGI_APPLICATION = 'hippocrates.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='hippocrates'),
+        'USER': config('DB_USER', default='hippo_user'),
+        'PASSWORD': config('DB_PASSWORD', default='hippo_pass'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -86,8 +97,34 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 # DRF defaults
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.MultiPartParser',   # for file uploads
         'rest_framework.parsers.JSONParser',
     ],
 }
+
+# JWT settings
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=config('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=60, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=config('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=7, cast=int)),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# Email (Gmail SMTP)
+EMAIL_BACKEND   = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST      = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT      = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS   = config('EMAIL_USE_TLS', default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Hippocrates AI <noreply@hippocrates.ai>')

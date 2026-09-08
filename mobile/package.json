@@ -1,0 +1,27 @@
+{
+  "name": "hippocrates-ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.74.5",
+    "@react-navigation/native": "^6.1.17",
+    "@react-navigation/bottom-tabs": "^6.5.20",
+    "react-native-screens": "^3.31.1",
+    "react-native-safe-area-context": "^4.10.5",
+    "react-native-vector-icons": "^10.1.0"
+  },
+  "devDependencies": {
+    "@react-native-community/cli": "latest",
+    "@babel/core": "^7.20.0",
+    "@types/react": "~18.2.79",
+    "@types/react-native": "^0.72.8",
+    "@types/react-native-vector-icons": "^6.4.18",
+    "typescript": "^5.1.3"
+  }
+}
