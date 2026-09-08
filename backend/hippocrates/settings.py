@@ -9,8 +9,8 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-kw@x!#)ps2v4_=ttoq%q3ie6(3u_nn436q%hlsso+-=)(m(m@7')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = ['*']
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -36,6 +36,7 @@ GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',   # must be FIRST
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -87,13 +88,15 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Media files (uploaded .docx files)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# CORS — allow the React dev server
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:5173').split(',')
 
 # DRF defaults
 REST_FRAMEWORK = {
