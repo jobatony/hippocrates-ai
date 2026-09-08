@@ -196,10 +196,14 @@ export const useStore = create<AppState>()(
     pendingQuestions: [question, ...state.pendingQuestions],
   })),
   
-  updateQuestionStatus: (id, status) => set((state) => ({
-    pendingQuestions: state.pendingQuestions.map(q => q.id === id ? { ...q, status } : q),
-    queueCount: status !== 'pending' ? Math.max(0, state.queueCount - 1) : state.queueCount
-  })),
+  updateQuestionStatus: (id, status) => set((state) => {
+    const existing = state.pendingQuestions.find(q => q.id === id);
+    const wasPending = existing && existing.status === 'pending';
+    return {
+      pendingQuestions: state.pendingQuestions.map(q => q.id === id ? { ...q, status } : q),
+      queueCount: wasPending ? Math.max(0, state.queueCount - 1) : state.queueCount
+    };
+  }),
   
   updateQuestionPayload: (id, payload) => set((state) => ({
     pendingQuestions: state.pendingQuestions.map(q => q.id === id ? { ...q, payload } : q)
