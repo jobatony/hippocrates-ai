@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import type { Question } from '../store/useStore';
 import { approveQuestion, deleteQuestion, regenerateQuestion, updateQuestionPayload } from '../api';
-import { Check, X, CheckSquare, Radio, Space as SpaceIcon, Edit2, RefreshCw, Save, ListChecks, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { Check, X, CheckSquare, Radio, Space as SpaceIcon, Edit2, Save, ListChecks, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
 import { MCQRenderer } from './MCQRenderer';

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useDocumentTree, useStore } from '../store/useStore';
 import { BlockNode } from './BlockNode';
 import { useTextSelection } from '../hooks/useTextSelection';

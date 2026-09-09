@@ -127,7 +127,6 @@ export const Layout: React.FC = () => {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isDocDrawerOpen, setIsDocDrawerOpen] = useState(false);
-  const scrollProgress = useStore(state => state.scrollProgress);
 
   // Upload modal state
   const [showUpload, setShowUpload] = useState(false);
@@ -237,7 +236,7 @@ export const Layout: React.FC = () => {
       await deleteMaterial(materialToDelete.id);
       setMaterials(materials.filter(m => m.id !== materialToDelete.id));
       if (activeMaterialId === materialToDelete.id) {
-        setActiveMaterial(null, '');
+        setActiveMaterial(null as any, '');
         setDocumentBlocks([]);
       }
       setMaterialToDelete(null);
