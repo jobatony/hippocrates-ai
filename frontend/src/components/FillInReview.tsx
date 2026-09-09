@@ -5,9 +5,10 @@ interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
   onNext: () => void;
+  isLastQuestion?: boolean;
 }
 
-export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext }) => {
+export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQuestion = false }) => {
   const payload = question.payload as FillInPayload;
   
   const [bank, setBank] = useState<string[]>([]);
@@ -181,11 +182,11 @@ export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext }) =>
           <button 
             onClick={onNext}
             className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
-          >
-            Next Question
-          </button>
+          >{isLastQuestion ? 'End Review' : 'Next Question'}</button>
         )}
       </div>
     </div>
   );
 };
+
+

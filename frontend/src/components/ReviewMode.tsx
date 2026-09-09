@@ -99,16 +99,16 @@ export const ReviewMode: React.FC = () => {
 
       <div className="w-full max-w-3xl">
         {currentQuestion.type === 'mcq' && (
-          <MCQReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} />
+          <MCQReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
         )}
         {currentQuestion.type === 'true_false' && (
-          <TrueFalseReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} />
+          <TrueFalseReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
         )}
         {currentQuestion.type === 'fill_in' && (
-          <FillInReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} />
+          <FillInReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
         )}
         {currentQuestion.type === 'applies' && (
-          <AppliesReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} />
+          <AppliesReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
         )}
       </div>
 
@@ -121,3 +121,4 @@ export const ReviewMode: React.FC = () => {
     </div>
   );
 };
+

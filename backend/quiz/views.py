@@ -21,9 +21,9 @@ class GenerateQuestionView(APIView):
 
         try:
             block = Block.objects.get(id=block_id)
-            material = Material.objects.get(id=material_id)
+            material = Material.objects.get(id=material_id, user=request.user)
         except (Block.DoesNotExist, Material.DoesNotExist):
-            return Response({'detail': 'Block or Material not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Block or Material not found or permission denied'}, status=status.HTTP_404_NOT_FOUND)
 
         # Atomic check for the 20 pending questions cap
         with transaction.atomic():
@@ -64,7 +64,7 @@ class RegenerateQuestionView(APIView):
         extra_instruction = request.data.get('extra_instruction', '')
 
         try:
-            question = Question.objects.get(pk=pk)
+            question = Question.objects.get(pk=pk, material__user=request.user)
         except Question.DoesNotExist:
             return Response({'detail': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -100,7 +100,7 @@ class QuestionDetailView(APIView):
     def patch(self, request, pk):
         """Allows inline manual editing of the payload, or approving a question"""
         try:
-            question = Question.objects.get(pk=pk)
+            question = Question.objects.get(pk=pk, material__user=request.user)
         except Question.DoesNotExist:
             return Response({'detail': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -121,7 +121,7 @@ class QuestionDetailView(APIView):
 
     def delete(self, request, pk):
         try:
-            question = Question.objects.get(pk=pk)
+            question = Question.objects.get(pk=pk, material__user=request.user)
         except Question.DoesNotExist:
             return Response({'detail': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
             
@@ -135,7 +135,7 @@ class QuestionListView(APIView):
         if not material_id:
             return Response({'detail': 'material_id query parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
             
-        questions = Question.objects.filter(material_id=material_id).order_by('-created_at')
+        questions = Question.objects.filter(material_id=material_id, material__user=request.user).order_by('-created_at')
         serializer = QuestionSerializer(questions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -150,7 +150,7 @@ class LogAttemptView(APIView):
         user_answer = request.data.get('user_answer', {})
         is_correct = request.data.get('is_correct')
 
-        question = get_object_or_404(Question, pk=question_id)
+        question = get_object_or_404(Question, pk=question_id, material__user=request.user)
 
         attempt = ReviewAttempt.objects.create(
             question=question,

@@ -5,6 +5,7 @@ interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
   onNext: () => void;
+  isLastQuestion?: boolean;
 }
 
 // We map statements to either their True or False version randomly on mount
@@ -14,7 +15,7 @@ interface ShownStatement {
   isTrue: boolean;
 }
 
-export const TrueFalseReview: React.FC<Props> = ({ question, onAnswer, onNext }) => {
+export const TrueFalseReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQuestion = false }) => {
   const payload = question.payload as TrueFalsePayload;
   
   const [shown, setShown] = useState<ShownStatement[]>([]);
@@ -127,11 +128,11 @@ export const TrueFalseReview: React.FC<Props> = ({ question, onAnswer, onNext })
           <button 
             onClick={onNext}
             className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
-          >
-            Next Question
-          </button>
+          >{isLastQuestion ? 'End Review' : 'Next Question'}</button>
         )}
       </div>
     </div>
   );
 };
+
+

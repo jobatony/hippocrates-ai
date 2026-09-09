@@ -16,6 +16,7 @@ class Material(models.Model):
         FAILED    = 'failed',    'Failed'
 
     id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user        = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='materials', null=True, blank=True)
     title       = models.CharField(max_length=500)
     file        = models.FileField(upload_to='materials/')   # stores the original .docx
     status      = models.CharField(

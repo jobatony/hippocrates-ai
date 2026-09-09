@@ -5,9 +5,10 @@ interface Props {
   question: Question;
   onAnswer: (correct: boolean) => void;
   onNext: () => void;
+  isLastQuestion?: boolean;
 }
 
-export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext }) => {
+export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQuestion = false }) => {
   const payload = question.payload as MCQPayload;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
@@ -68,7 +69,7 @@ export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext }) => {
             onClick={onNext}
             className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
           >
-            Next Question
+            {isLastQuestion ? 'End Review' : 'Next Question'}
           </button>
         )}
       </div>

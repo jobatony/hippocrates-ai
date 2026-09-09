@@ -20,7 +20,7 @@ class MaterialListCreateView(APIView):
     parser_classes = [MultiPartParser, JSONParser]
 
     def get(self, request):
-        materials = Material.objects.all()
+        materials = Material.objects.filter(user=request.user)
         serializer = MaterialSerializer(materials, many=True)
         return Response(serializer.data)
 
@@ -30,7 +30,7 @@ class MaterialListCreateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         # 1. Save the material record and the uploaded file
-        material = serializer.save(status=Material.Status.PARSING)
+        material = serializer.save(user=request.user, status=Material.Status.PARSING)
 
         # 2. Parse the .docx synchronously (async/Celery comes later)
         try:
@@ -62,14 +62,14 @@ class MaterialDetailView(APIView):
     DELETE /api/materials/<uuid:pk>/ → delete material and all its blocks
     """
 
-    def _get_material(self, pk):
+    def _get_material(self, pk, user):
         try:
-            return Material.objects.get(pk=pk)
+            return Material.objects.get(pk=pk, user=user)
         except Material.DoesNotExist:
             return None
 
     def get(self, request, pk):
-        material = self._get_material(pk)
+        material = self._get_material(pk, request.user)
         if not material:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -77,7 +77,7 @@ class MaterialDetailView(APIView):
         return Response(serializer.data)
 
     def delete(self, request, pk):
-        material = self._get_material(pk)
+        material = self._get_material(pk, request.user)
         if not material:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 

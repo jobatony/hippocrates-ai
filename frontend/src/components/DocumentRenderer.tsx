@@ -8,9 +8,10 @@ import { CheckSquare, Radio, Space, Loader2, FileText, ListChecks } from 'lucide
 interface Props {
   readOnly?: boolean;
   scrollToBlockId?: string | null;
+  isDrawerOpen?: boolean;
 }
 
-export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBlockId = null }) => {
+export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBlockId = null, isDrawerOpen = false }) => {
   const tree = useDocumentTree();
   const { selection, clearSelection } = useTextSelection();
   const queueCount = useStore(state => state.queueCount);
@@ -35,9 +36,9 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
             el.classList.remove('bg-primary/10');
           }, 2000);
         }
-      }, 50);
+      }, 350); // wait for drawer transition (300ms) to complete before calculating scroll position
     }
-  }, [scrollToBlockId, tree.length]);
+  }, [scrollToBlockId, tree.length, isDrawerOpen]);
 
   const handleGenerate = (type: 'true_false' | 'mcq' | 'fill_in' | 'applies') => {
     if (selection && selection.blockId) {

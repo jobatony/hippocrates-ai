@@ -33,6 +33,7 @@ export const Layout: React.FC = () => {
   // On mobile sidebars default to closed; on desktop they default open
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [isDocDrawerOpen, setIsDocDrawerOpen] = useState(false);
 
   // Upload modal state
   const [showUpload, setShowUpload] = useState(false);
@@ -215,10 +216,10 @@ export const Layout: React.FC = () => {
 
           <div className="flex items-center gap-sm md:gap-md">
             {/* Review Queue button — mobile only in read mode */}
-            {mode === 'read' && (
+            {mode === 'read' ? (
               <button
                 onClick={() => setIsRightSidebarOpen(v => !v)}
-                className="relative p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
+                className="relative p-xs md:hidden hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
                 title="Review Queue"
               >
                 <ClipboardList size={20} />
@@ -227,6 +228,14 @@ export const Layout: React.FC = () => {
                     {pendingCount > 9 ? '9+' : pendingCount}
                   </span>
                 )}
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsDocDrawerOpen(v => !v)}
+                className="relative p-xs md:hidden hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
+                title="View Source Material"
+              >
+                <Book size={20} />
               </button>
             )}
 
@@ -321,9 +330,32 @@ export const Layout: React.FC = () => {
             <>
               {/* Review Mode — full width on mobile */}
               <ReviewMode />
-              {/* Doc sidebar hidden on mobile in review mode */}
-              <aside className="hidden md:block w-96 shrink-0 border-l border-outline-variant overflow-y-auto bg-surface-container-lowest">
-                <DocumentRenderer readOnly scrollToBlockId={activeBlockId} />
+              
+              {/* Doc sidebar drawer on mobile in review mode */}
+              {isDocDrawerOpen && (
+                <div
+                  className="fixed inset-0 bg-black/40 z-40 md:hidden"
+                  onClick={() => setIsDocDrawerOpen(false)}
+                />
+              )}
+              <aside className={`
+                fixed md:relative inset-y-0 right-0 z-50
+                bg-surface-container-lowest flex flex-col shrink-0 border-l border-outline-variant
+                transition-transform duration-300
+                w-[85vw] md:w-96
+                ${isDocDrawerOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+              `}>
+                <div className="w-[85vw] md:w-96 flex flex-col h-full">
+                  <header className="h-14 md:hidden flex items-center justify-between px-md border-b border-outline-variant bg-surface-container-high shrink-0">
+                    <div className="font-headline-md text-on-surface">Source Material</div>
+                    <button onClick={() => setIsDocDrawerOpen(false)} className="p-xs text-on-surface-variant hover:bg-surface-container-highest rounded">
+                      <X size={20} />
+                    </button>
+                  </header>
+                  <div className="flex-1 overflow-y-auto relative">
+                    <DocumentRenderer readOnly scrollToBlockId={activeBlockId} isDrawerOpen={isDocDrawerOpen} />
+                  </div>
+                </div>
               </aside>
             </>
           )}
