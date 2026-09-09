@@ -6,3 +6,5 @@ media/
 venv/
 .venv/
 node_modules/
+
+hippocrates_app/
