@@ -83,9 +83,9 @@ export const AppliesReview: React.FC<Props> = ({ question, onAnswer, onNext, isL
               type="checkbox" 
               checked={selectedIndices.has(i)} 
               readOnly 
-              className="pointer-events-none" 
+              className="pointer-events-none shrink-0" 
             />
-            <span>{opt}</span>
+            <span className="flex-1 min-w-0 break-words">{opt}</span>
           </div>
         ))}
       </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { MCQPayload } from '../store/useStore';
 import clsx from 'clsx';
+import { Minus, Plus } from 'lucide-react';
 
 interface Props {
   payload: MCQPayload;
@@ -38,12 +39,40 @@ export const MCQRenderer: React.FC<Props> = ({ payload, isEditing, onChange }) =
                   newOptions[i] = e.target.value;
                   onChange({ ...payload, options: newOptions });
                 }}
-                className="flex-1 p-sm bg-surface rounded border border-outline text-body-md focus:outline-none focus:border-primary"
+                className="flex-1 min-w-0 p-sm bg-surface rounded border border-outline text-body-md focus:outline-none focus:border-primary"
                 placeholder={`Option ${i + 1}`}
               />
+              {payload.options.length > 2 && (
+                <button
+                  onClick={() => {
+                    const newOptions = payload.options.filter((_, idx) => idx !== i);
+                    let newCorrectIndex = payload.correct_index;
+                    if (payload.correct_index === i) {
+                      newCorrectIndex = 0;
+                    } else if (payload.correct_index > i) {
+                      newCorrectIndex -= 1;
+                    }
+                    onChange({ ...payload, options: newOptions, correct_index: newCorrectIndex });
+                  }}
+                  className="text-error hover:bg-error-container p-1 rounded shrink-0"
+                  title="Remove option"
+                >
+                  <Minus size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>
+        
+        <button
+          onClick={() => onChange({
+            ...payload, 
+            options: [...payload.options, '']
+          })}
+          className="w-full py-xs mt-sm flex items-center justify-center gap-xs text-primary text-label-sm hover:bg-primary-container/20 rounded transition-colors"
+        >
+          <Plus size={14} /> Add Option
+        </button>
         
         <textarea
           value={payload.explanation}
@@ -76,7 +105,7 @@ export const MCQRenderer: React.FC<Props> = ({ payload, isEditing, onChange }) =
               )}>
                 {isSelected && <div className="w-2 h-2 rounded-full bg-on-primary"></div>}
               </div>
-              <span className="text-body-md">{option}</span>
+              <span className="text-body-md flex-1 min-w-0 break-words">{option}</span>
             </div>
           );
         })}

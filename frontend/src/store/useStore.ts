@@ -95,6 +95,10 @@ interface AppState {
   activeMaterialTitle: string;
   setActiveMaterial: (id: string, title: string) => void;
 
+  // Read progress
+  scrollProgress: number;
+  setScrollProgress: (progress: number) => void;
+
   // Document blocks
   documentBlocks: Block[];
   isLoadingDocument: boolean;
@@ -162,6 +166,9 @@ export const useStore = create<AppState>()(
   activeMaterialId: null,
   activeMaterialTitle: '',
   setActiveMaterial: (id, title) => set({ activeMaterialId: id, activeMaterialTitle: title }),
+
+  scrollProgress: 0,
+  setScrollProgress: (progress) => set({ scrollProgress: progress }),
 
   // Document blocks — start EMPTY, filled by API
   documentBlocks: [],

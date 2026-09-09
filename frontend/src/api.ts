@@ -3,7 +3,8 @@
 
 import type { Question } from './store/useStore';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://${API_HOST}:8000/api`;
 
 // ─── Auth Token Helpers ───────────────────────────────────────────────────────
 
@@ -246,6 +247,15 @@ export async function uploadMaterial(title: string, file: File): Promise<ApiUplo
 export async function deleteMaterial(id: string): Promise<void> {
   const res = await authFetch(`${BASE_URL}/materials/${id}/`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Delete failed: ${res.statusText}`);
+}
+
+export async function renameMaterial(id: string, title: string): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/materials/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error(`Rename failed: ${res.statusText}`);
 }
 
 // ─── Question API ─────────────────────────────────────────────────────────────

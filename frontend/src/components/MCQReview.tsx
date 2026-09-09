@@ -42,7 +42,7 @@ export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQ
           <div 
             key={i}
             onClick={() => !checked && setSelectedIndex(i)}
-            className={`p-md rounded-lg border border-outline-variant cursor-pointer transition-all ${getOptionClass(i)}`}
+            className={`p-md rounded-lg border border-outline-variant cursor-pointer transition-all break-words ${getOptionClass(i)}`}
           >
             {opt}
           </div>

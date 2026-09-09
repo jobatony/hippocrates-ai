@@ -145,7 +145,7 @@ export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext, isLa
         <h3 className="text-label-md text-on-surface-variant mb-sm uppercase">Answer Bank</h3>
         <div className="flex flex-wrap gap-sm p-md bg-surface-container-lowest border border-outline-variant rounded-lg min-h-[80px]">
           {bank.map((text, i) => {
-            let badgeClass = "px-md py-xs rounded border shadow-sm text-body-md transition-colors ";
+            let badgeClass = "px-md py-xs rounded border shadow-sm text-body-md transition-colors max-w-full break-words whitespace-normal ";
             
             if (!checked) {
               badgeClass += "bg-surface border-outline cursor-grab active:cursor-grabbing text-on-surface hover:bg-surface-container-high";

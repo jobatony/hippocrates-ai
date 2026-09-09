@@ -116,3 +116,4 @@ export const useTextSelection = () => {
 
   return { selection, clearSelection };
 };
+

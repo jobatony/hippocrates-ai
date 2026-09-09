@@ -38,7 +38,7 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ block }) => {
   };
 
   return (
-    <div id={`block-${id}`} data-block-id={id} className="relative group p-xs -mx-xs rounded hover:bg-surface-container-lowest transition-colors">
+    <div id={`block-${id}`} data-block-id={id} className="select-text relative group p-xs -mx-xs rounded hover:bg-surface-container-lowest transition-colors">
       {renderContent()}
       {children && children.length > 0 && (
         <div className="pl-4">

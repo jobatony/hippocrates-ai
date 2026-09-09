@@ -33,7 +33,7 @@ export const FillInRenderer: React.FC<Props> = ({ payload, isEditing, onChange }
                   newBank[i].text = e.target.value;
                   onChange({ ...payload, answer_bank: newBank });
                 }}
-                className="flex-1 p-xs bg-surface rounded border border-outline focus:outline-none focus:border-primary text-body-sm"
+                className="flex-1 min-w-0 p-xs bg-surface rounded border border-outline focus:outline-none focus:border-primary text-body-sm"
               />
               <input
                 type="text"
@@ -101,12 +101,12 @@ export const FillInRenderer: React.FC<Props> = ({ payload, isEditing, onChange }
               <div 
                 key={i} 
                 className={clsx(
-                  "px-md py-sm rounded-lg text-body-md text-on-surface shadow-sm border flex items-center gap-xs",
+                  "px-md py-sm rounded-lg text-body-md text-on-surface shadow-sm border flex items-center gap-xs max-w-full break-words whitespace-normal",
                   isAnswer ? "bg-primary-container/10 border-primary text-primary" : "bg-surface border-outline-variant"
                 )}
               >
-                {opt.text}
-                {isAnswer && <span className="text-[10px] bg-primary text-on-primary px-1 rounded-full">{opt.correct_for_gaps.join(',')}</span>}
+                <span className="break-words min-w-0">{opt.text}</span>
+                {isAnswer && <span className="text-[10px] bg-primary text-on-primary px-1 rounded-full shrink-0">{opt.correct_for_gaps.join(',')}</span>}
               </div>
             );
           })}

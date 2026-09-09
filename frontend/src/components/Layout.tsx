@@ -3,8 +3,101 @@ import { DocumentRenderer } from './DocumentRenderer';
 import { QuestionCard } from './QuestionCard';
 import { ReviewMode } from './ReviewMode';
 import { useStore } from '../store/useStore';
-import { Book, Settings, Plus, User, Upload, Loader2, X, Menu, ClipboardList } from 'lucide-react';
-import { fetchMaterials, fetchMaterialDetail, uploadMaterial, fetchQuestions, logout as logoutApi } from '../api';
+import { Book, Settings, Plus, User, Upload, Loader2, X, Menu, ClipboardList, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { fetchMaterials, fetchMaterialDetail, uploadMaterial, fetchQuestions, logout as logoutApi, renameMaterial, deleteMaterial } from '../api';
+import type { Material } from '../store/useStore';
+
+const MaterialNavItem: React.FC<{
+  material: Material;
+  isActive: boolean;
+  onSelect: () => void;
+  onRename: (id: string, newTitle: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}> = ({ material, isActive, onSelect, onRename, onDelete }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(material.title);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleRename = async () => {
+    if (editTitle.trim() === '' || editTitle === material.title) {
+      setIsEditing(false);
+      setEditTitle(material.title);
+      return;
+    }
+    setIsProcessing(true);
+    await onRename(material.id, editTitle);
+    setIsEditing(false);
+    setIsProcessing(false);
+  };
+
+  return (
+    <div 
+      className={`group relative w-full flex items-center px-md py-sm transition-colors rounded-lg text-left gap-sm ${
+        isActive
+          ? 'bg-secondary-container text-on-secondary-container'
+          : 'text-on-surface-variant hover:bg-surface-container-highest'
+      }`}
+      onMouseLeave={() => setShowMenu(false)}
+    >
+      <button onClick={onSelect} className="shrink-0">
+        <Book size={18} />
+      </button>
+
+      {isEditing ? (
+        <input
+          autoFocus
+          className="flex-1 min-w-0 bg-transparent border-b border-primary focus:outline-none text-label-md"
+          value={editTitle}
+          onChange={e => setEditTitle(e.target.value)}
+          onBlur={handleRename}
+          onKeyDown={e => {
+            if (e.key === 'Enter') handleRename();
+            if (e.key === 'Escape') {
+              setIsEditing(false);
+              setEditTitle(material.title);
+            }
+          }}
+          disabled={isProcessing}
+        />
+      ) : (
+        <button onClick={onSelect} className="flex-1 min-w-0 text-left truncate text-label-md">
+          {material.title}
+        </button>
+      )}
+
+      {material.status === 'parsing' ? (
+        <Loader2 size={14} className="shrink-0 animate-spin" />
+      ) : (
+        <div className="shrink-0 relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+            className={`p-1 rounded hover:bg-surface-variant transition-colors ${showMenu ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'}`}
+          >
+            <MoreVertical size={14} />
+          </button>
+          
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 w-36 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg z-50 p-1 flex flex-col gap-[2px]">
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsEditing(true); setShowMenu(false); }}
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-container flex items-center gap-2 text-label-md text-on-surface transition-colors"
+              >
+                <Pencil size={14} className="text-on-surface-variant" /> Rename
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(material.id); setShowMenu(false); }}
+                className="w-full text-left px-3 py-2 rounded-lg hover:bg-error-container text-error flex items-center gap-2 text-label-md transition-colors"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const Layout: React.FC = () => {
   const {
@@ -34,6 +127,7 @@ export const Layout: React.FC = () => {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isDocDrawerOpen, setIsDocDrawerOpen] = useState(false);
+  const scrollProgress = useStore(state => state.scrollProgress);
 
   // Upload modal state
   const [showUpload, setShowUpload] = useState(false);
@@ -46,9 +140,16 @@ export const Layout: React.FC = () => {
   // Load materials list on mount
   useEffect(() => {
     fetchMaterials()
-      .then(setMaterials)
+      .then(fetchedMaterials => {
+        setMaterials(fetchedMaterials);
+        // If the persisted active material is no longer in the DB, clear it
+        if (activeMaterialId && !fetchedMaterials.find(m => m.id === activeMaterialId)) {
+          setActiveMaterial(null as any, '');
+          setDocumentBlocks([]);
+        }
+      })
       .catch(err => console.error('Failed to load materials:', err));
-  }, [setMaterials]);
+  }, [setMaterials, activeMaterialId, setActiveMaterial, setDocumentBlocks]);
 
   // Fetch questions whenever activeMaterialId changes
   useEffect(() => {
@@ -69,10 +170,15 @@ export const Layout: React.FC = () => {
       setLoadingDocument(true);
       fetchMaterialDetail(activeMaterialId)
         .then(detail => { setDocumentBlocks(detail.blocks as any); })
-        .catch(err => console.error('Failed to restore document:', err))
+        .catch(err => {
+          console.error('Failed to restore document:', err);
+          // If the document fails to load (e.g. 404), it was likely deleted. Clear it from the state.
+          setActiveMaterial(null as any, '');
+          setDocumentBlocks([]);
+        })
         .finally(() => setLoadingDocument(false));
     }
-  }, [activeMaterialId, documentBlocks.length, setDocumentBlocks, setLoadingDocument]);
+  }, [activeMaterialId, documentBlocks.length, setDocumentBlocks, setLoadingDocument, setActiveMaterial]);
 
   const handleSelectMaterial = async (id: string, title: string) => {
     if (activeMaterialId === id) return;
@@ -109,10 +215,43 @@ export const Layout: React.FC = () => {
     }
   };
 
+  const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleRenameMaterial = async (id: string, newTitle: string) => {
+    try {
+      await renameMaterial(id, newTitle);
+      setMaterials(materials.map(m => m.id === id ? { ...m, title: newTitle } : m));
+      if (activeMaterialId === id) {
+        setActiveMaterial(id, newTitle);
+      }
+    } catch (err) {
+      alert("Failed to rename material");
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!materialToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteMaterial(materialToDelete.id);
+      setMaterials(materials.filter(m => m.id !== materialToDelete.id));
+      if (activeMaterialId === materialToDelete.id) {
+        setActiveMaterial(null, '');
+        setDocumentBlocks([]);
+      }
+      setMaterialToDelete(null);
+    } catch (err) {
+      alert("Failed to delete material");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const pendingCount = pendingQuestions.filter(q => q.status === 'pending' || q.status === 'failed').length;
 
   return (
-    <div className="flex h-[100dvh] bg-background font-body-md text-on-surface overflow-hidden">
+    <div className="select-none flex min-h-[100dvh] md:h-[100dvh] bg-background font-body-md text-on-surface md:overflow-hidden">
 
       {/* ── Left Sidebar Overlay (mobile) / Panel (desktop) ─────────────── */}
       {/* Backdrop */}
@@ -148,21 +287,14 @@ export const Layout: React.FC = () => {
                 </p>
               )}
               {materials.map(material => (
-                <button
+                <MaterialNavItem
                   key={material.id}
-                  onClick={() => handleSelectMaterial(material.id, material.title)}
-                  className={`w-full flex items-center px-md py-sm transition-colors rounded-lg text-left gap-sm ${
-                    activeMaterialId === material.id
-                      ? 'bg-secondary-container text-on-secondary-container'
-                      : 'text-on-surface-variant hover:bg-surface-container-highest'
-                  }`}
-                >
-                  <Book size={18} className="shrink-0" />
-                  <span className="truncate text-label-md">{material.title}</span>
-                  {material.status === 'parsing' && (
-                    <Loader2 size={14} className="ml-auto shrink-0 animate-spin" />
-                  )}
-                </button>
+                  material={material}
+                  isActive={activeMaterialId === material.id}
+                  onSelect={() => handleSelectMaterial(material.id, material.title)}
+                  onRename={handleRenameMaterial}
+                  onDelete={async () => setMaterialToDelete(material)}
+                />
               ))}
             </nav>
           </div>
@@ -190,7 +322,7 @@ export const Layout: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 bg-surface">
 
         {/* Header */}
-        <header className="h-14 md:h-16 flex items-center justify-between px-md md:px-xl bg-surface/80 backdrop-blur-xl z-40 border-b border-outline-variant shrink-0 gap-sm">
+        <header className="sticky top-0 h-14 md:h-16 flex items-center justify-between px-md md:px-xl bg-surface/80 backdrop-blur-xl z-40 border-b border-outline-variant shrink-0 gap-sm">
           <div className="flex items-center gap-sm">
             {/* Hamburger — always visible */}
             <button
@@ -215,11 +347,11 @@ export const Layout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-sm md:gap-md">
-            {/* Review Queue button — mobile only in read mode */}
+            {/* Review Queue button */}
             {mode === 'read' ? (
               <button
                 onClick={() => setIsRightSidebarOpen(v => !v)}
-                className="relative p-xs md:hidden hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
+                className="relative p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
                 title="Review Queue"
               >
                 <ClipboardList size={20} />
@@ -232,7 +364,7 @@ export const Layout: React.FC = () => {
             ) : (
               <button
                 onClick={() => setIsDocDrawerOpen(v => !v)}
-                className="relative p-xs md:hidden hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
+                className="relative p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
                 title="View Source Material"
               >
                 <Book size={20} />
@@ -269,7 +401,7 @@ export const Layout: React.FC = () => {
         </header>
 
         {/* Main */}
-        <main className="flex-1 flex min-h-0 relative overflow-hidden">
+        <main className="flex-1 flex min-h-0 relative md:overflow-hidden">
           {mode === 'read' ? (
             <>
               <DocumentRenderer />
@@ -393,7 +525,7 @@ export const Layout: React.FC = () => {
                   className="w-full border-2 border-dashed border-outline-variant rounded-lg p-lg flex flex-col items-center gap-sm cursor-pointer hover:border-primary transition-colors"
                 >
                   <Upload size={24} className="text-on-surface-variant" />
-                  <span className="text-label-md text-on-surface-variant text-center">
+                  <span className="text-label-md text-on-surface-variant text-center truncate w-full px-sm">
                     {uploadFile ? uploadFile.name : 'Tap to select a .docx file'}
                   </span>
                 </div>
@@ -429,6 +561,39 @@ export const Layout: React.FC = () => {
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Global Delete Confirm Modal */}
+      {materialToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-md bg-black/40 backdrop-blur-sm transition-opacity duration-200">
+          <div className="bg-surface rounded-2xl shadow-2xl border border-outline-variant w-full max-w-sm overflow-hidden transform transition-all duration-200">
+            <div className="p-xl text-center flex flex-col items-center">
+              <div className="w-12 h-12 rounded-full bg-error-container text-error flex items-center justify-center mb-md">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-title-lg font-bold text-on-surface mb-sm">Delete Material?</h3>
+              <p className="text-body-md text-on-surface-variant w-full whitespace-normal break-words">
+                Are you sure you want to delete <span className="font-bold text-on-surface break-all">"{materialToDelete.title}"</span>? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex bg-surface-container-low p-md gap-sm">
+              <button
+                onClick={() => setMaterialToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 py-sm rounded-full text-label-md font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-1 py-sm rounded-full text-label-md font-bold bg-error text-on-error hover:bg-error/90 shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-xs"
+              >
+                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

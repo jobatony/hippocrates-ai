@@ -56,9 +56,9 @@ export const AppliesRenderer: React.FC<Props> = ({ payload, isEditing, onChange 
         {shuffled.map((opt, i) => {
           const isCorrect = payload.correct_options.includes(opt);
           return (
-            <div key={i} className="px-sm py-xs rounded border text-label-sm">
-              {opt}
-              <span className="ml-xs text-xs opacity-60">{isCorrect ? 'v' : 'x'}</span>
+            <div key={i} className="px-sm py-xs rounded border text-label-sm flex items-start gap-xs max-w-full break-words whitespace-normal">
+              <span className="flex-1 min-w-0 break-words">{opt}</span>
+              <span className="shrink-0 text-xs opacity-60 mt-[2px]">{isCorrect ? '✓' : '✗'}</span>
             </div>
           );
         })}

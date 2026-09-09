@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import type { Question } from '../store/useStore';
 import { approveQuestion, deleteQuestion, regenerateQuestion, updateQuestionPayload } from '../api';
-import { Check, X, CheckSquare, Radio, Space as SpaceIcon, Edit2, RefreshCw, Save, ListChecks } from 'lucide-react';
+import { Check, X, CheckSquare, Radio, Space as SpaceIcon, Edit2, RefreshCw, Save, ListChecks, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
 import { MCQRenderer } from './MCQRenderer';
@@ -82,10 +82,10 @@ export const QuestionCard: React.FC<Props> = ({ question }) => {
   };
 
   const renderBadge = () => {
-    if (type === 'true_false') return <><CheckSquare size={14} /> True / False</>;
-    if (type === 'mcq') return <><Radio size={14} /> Multiple Choice</>;
-    if (type === 'fill_in') return <><SpaceIcon size={14} /> Fill-in Gap</>;
-    if (type === 'applies') return <><ListChecks size={14} /> Select All That Apply</>;
+    if (type === 'true_false') return <><CheckSquare size={14} className="shrink-0 mt-[2px]" /> <span className="whitespace-normal break-words leading-tight flex-1">True / False</span></>;
+    if (type === 'mcq') return <><Radio size={14} className="shrink-0 mt-[2px]" /> <span className="whitespace-normal break-words leading-tight flex-1">MCQ</span></>;
+    if (type === 'fill_in') return <><SpaceIcon size={14} className="shrink-0 mt-[2px]" /> <span className="whitespace-normal break-words leading-tight flex-1">Fill-in Gap</span></>;
+    if (type === 'applies') return <><ListChecks size={14} className="shrink-0 mt-[2px]" /> <span className="whitespace-normal break-words leading-tight flex-1">Select All</span></>;
     return null;
   };
 
@@ -99,47 +99,54 @@ export const QuestionCard: React.FC<Props> = ({ question }) => {
       isEditing ? "border-primary" : "border-surface-variant hover:border-outline"
     )}>
       {/* Header */}
-      <div className="flex justify-between items-start mb-md">
-        <div className="flex items-center gap-xs bg-surface-container-high text-on-surface px-sm py-xs rounded text-label-sm shadow-sm">
+      <div className="flex justify-between items-start mb-md gap-sm">
+        <div className="flex items-start gap-xs bg-surface-container-high text-on-surface px-sm py-xs rounded text-label-sm shadow-sm w-fit max-w-[45%] sm:max-w-none">
           {renderBadge()}
         </div>
         
-        <div className="flex gap-xs">
+        <div className="flex flex-wrap gap-xs justify-end items-center">
           {isEditing ? (
-            <>
+            <div className="flex items-center gap-xs ml-auto">
               <button 
                 onClick={() => { setIsEditing(false); setEditedPayload(payload); }}
-                className="w-8 h-8 rounded bg-surface-container-highest hover:bg-surface-variant flex items-center justify-center transition-colors"
-                title="Cancel Edit"
+                disabled={isProcessing}
+                className="px-md py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-label-sm font-bold transition-colors disabled:opacity-50"
               >
-                <X size={16} />
+                Cancel
               </button>
               <button 
                 onClick={handleSaveEdit}
                 disabled={isProcessing}
-                className="w-8 h-8 rounded bg-primary text-on-primary flex items-center justify-center transition-colors disabled:opacity-50"
-                title="Save Edit"
+                className="px-md py-1.5 rounded-full bg-primary hover:bg-primary/90 text-on-primary text-label-sm font-bold shadow-sm transition-colors disabled:opacity-50 flex items-center gap-xs"
               >
-                <Save size={16} />
+                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Save
               </button>
-            </>
+            </div>
           ) : (
             <>
               <button 
                 onClick={() => setIsReprompting(!isReprompting)}
-                className="w-8 h-8 rounded-full bg-surface-container-highest hover:bg-secondary-container text-on-surface-variant hover:text-on-secondary-container flex items-center justify-center transition-colors"
-                title="Re-prompt AI"
+                disabled={isProcessing}
+                className={clsx(
+                  "px-sm py-1.5 rounded-full text-label-sm font-bold flex items-center gap-[4px] transition-colors disabled:opacity-50 border",
+                  isReprompting ? "bg-primary/10 text-primary border-primary/20" : "bg-surface text-on-surface-variant hover:text-on-surface border-outline-variant hover:bg-surface-container"
+                )}
+                title="Reprompt AI"
               >
-                <RefreshCw size={14} />
+                <Sparkles size={14} /> <span className="hidden sm:inline">AI Fix</span>
               </button>
               <button 
-                onClick={() => setIsEditing(true)}
-                className="w-8 h-8 rounded-full bg-surface-container-highest hover:bg-surface-variant text-on-surface-variant flex items-center justify-center transition-colors"
+                onClick={() => { setIsEditing(true); setIsReprompting(false); }}
+                disabled={isProcessing}
+                className="px-sm py-1.5 rounded-full text-label-sm font-bold flex items-center gap-[4px] transition-colors disabled:opacity-50 border bg-surface text-on-surface-variant hover:text-on-surface border-outline-variant hover:bg-surface-container"
                 title="Manual Edit"
               >
-                <Edit2 size={14} />
+                <Edit2 size={14} /> <span className="hidden sm:inline">Edit</span>
               </button>
-              <div className="w-px h-8 bg-outline-variant mx-xs"></div>
+              
+              <div className="w-px h-6 bg-outline-variant mx-1"></div>
+              
               <button 
                 onClick={handleDelete}
                 disabled={isProcessing}
@@ -154,7 +161,7 @@ export const QuestionCard: React.FC<Props> = ({ question }) => {
                 className="w-8 h-8 rounded-full bg-primary hover:bg-primary/90 text-on-primary flex items-center justify-center transition-colors shadow-sm disabled:opacity-50"
                 title="Approve"
               >
-                <Check size={18} />
+                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
               </button>
             </>
           )}
@@ -163,21 +170,27 @@ export const QuestionCard: React.FC<Props> = ({ question }) => {
 
       {/* Reprompt Inline Editor */}
       {isReprompting && !isEditing && (
-        <div className="mb-md p-sm bg-secondary-container/20 border border-secondary/30 rounded-lg flex gap-sm">
+        <div className="mb-md mt-sm bg-surface-container-lowest border border-outline-variant rounded-full flex items-center gap-xs shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all overflow-hidden">
+          <div className="pl-md py-sm flex items-center justify-center text-primary shrink-0">
+            <Sparkles size={16} />
+          </div>
           <input
             type="text"
             value={repromptInstruction}
             onChange={e => setRepromptInstruction(e.target.value)}
             placeholder="Tell the AI what to fix..."
-            className="flex-1 bg-transparent border-b border-secondary/50 focus:outline-none focus:border-secondary text-body-sm"
+            className="flex-1 bg-transparent py-sm px-xs focus:outline-none text-body-sm text-on-surface placeholder:text-on-surface-variant min-w-0"
             onKeyDown={e => e.key === 'Enter' && handleReprompt()}
+            disabled={isProcessing}
+            autoFocus
           />
           <button 
             onClick={handleReprompt}
             disabled={isProcessing || !repromptInstruction.trim()}
-            className="px-sm py-xs bg-secondary text-on-secondary rounded text-label-sm disabled:opacity-50"
+            className="w-8 h-8 mr-xs rounded-full bg-primary hover:bg-primary/90 text-on-primary flex items-center justify-center transition-colors disabled:opacity-50 disabled:bg-surface-container-high disabled:text-on-surface-variant shrink-0"
+            title="Generate"
           >
-            {isProcessing ? 'Generating...' : 'Go'}
+            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
           </button>
         </div>
       )}

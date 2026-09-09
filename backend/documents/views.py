@@ -76,6 +76,19 @@ class MaterialDetailView(APIView):
         serializer = MaterialDetailSerializer(material)
         return Response(serializer.data)
 
+    def patch(self, request, pk):
+        material = self._get_material(pk, request.user)
+        if not material:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+            
+        title = request.data.get('title')
+        if title:
+            material.title = title
+            material.save(update_fields=['title'])
+            return Response({'detail': 'Material updated', 'title': title})
+            
+        return Response({'detail': 'No title provided'}, status=status.HTTP_400_BAD_REQUEST)
+
     def delete(self, request, pk):
         material = self._get_material(pk, request.user)
         if not material:

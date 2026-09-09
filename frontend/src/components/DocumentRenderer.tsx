@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDocumentTree, useStore } from '../store/useStore';
 import { BlockNode } from './BlockNode';
 import { useTextSelection } from '../hooks/useTextSelection';
@@ -40,6 +40,51 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
     }
   }, [scrollToBlockId, tree.length, isDrawerOpen]);
 
+  const setScrollProgress = useStore(state => state.setScrollProgress);
+  const scrollProgress = useStore(state => state.scrollProgress);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      let currentProgress = 0;
+      
+      // Desktop (container scroll)
+      if (window.innerWidth >= 768 && containerRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+        if (scrollHeight > clientHeight) {
+          currentProgress = (scrollTop / (scrollHeight - clientHeight)) * 100;
+        }
+      } 
+      // Mobile (window scroll)
+      else {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight;
+        if (scrollHeight > clientHeight) {
+          currentProgress = (scrollTop / (scrollHeight - clientHeight)) * 100;
+        }
+      }
+      
+      setScrollProgress(Math.min(100, Math.max(0, currentProgress)));
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    
+    // Initial calculate after render
+    setTimeout(handleScroll, 100);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [tree.length]);
+
   const handleGenerate = (type: 'true_false' | 'mcq' | 'fill_in' | 'applies') => {
     if (selection && selection.blockId) {
       generateQuestion(selection.blockId, selection.text, type);
@@ -76,13 +121,31 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
   }
 
   return (
-    <div
-      className="flex-1 flex flex-col min-w-0 bg-surface px-md sm:px-xl py-xl overflow-y-auto relative h-full"
-      onContextMenu={handleContextMenu}
-    >
-      <div className="max-w-3xl mx-auto w-full relative">
+    <div className="flex-1 flex flex-col min-w-0 bg-surface relative md:h-full">
+      {/* Read Progress Bar */}
+      <div className="sticky top-14 md:absolute md:top-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-xl px-md sm:px-xl py-2 border-b border-outline-variant transition-all">
+        <div className="max-w-3xl mx-auto flex items-center gap-sm">
+          <div className="flex-1 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
+            <div 
+              className="bg-primary h-1.5 rounded-full transition-all duration-150 ease-out" 
+              style={{ width: `${scrollProgress}%` }}
+            />
+          </div>
+          <div className="text-[11px] text-on-surface-variant font-bold font-mono w-8 text-right">
+            {Math.round(scrollProgress)}%
+          </div>
+        </div>
+      </div>
+
+      {/* Scrolling Content */}
+      <div
+        ref={containerRef}
+        className="flex-1 flex flex-col min-w-0 px-md sm:px-xl pt-6 pb-xl md:pt-16 md:overflow-y-auto relative"
+        onContextMenu={handleContextMenu}
+      >
+        <div className="max-w-3xl mx-auto w-full relative">
         <header className="mb-xl">
-          <h1 className="font-display-lg text-on-surface mb-sm text-[clamp(1.4rem,4vw,2.2rem)] leading-tight">{activeMaterialTitle}</h1>
+          <h1 className="font-display-lg text-on-surface mb-sm text-[clamp(1.4rem,4vw,2.2rem)] leading-tight line-clamp-3 break-words hyphens-auto" lang="en">{activeMaterialTitle}</h1>
           <div className="flex items-center gap-md text-label-md text-on-surface-variant">
             <span>{tree.length} sections</span>
           </div>
@@ -166,6 +229,7 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
