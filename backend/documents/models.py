@@ -24,6 +24,7 @@ class Material(models.Model):
                     choices=Status.choices,
                     default=Status.PENDING,
                   )
+    tags        = models.ManyToManyField('Tag', through='MaterialTag', related_name='materials', blank=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
 
@@ -73,3 +74,37 @@ class Block(models.Model):
 
     def __str__(self):
         return f"[{self.block_type}] {self.text[:60]}"
+
+
+class Tag(models.Model):
+    id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user       = models.ForeignKey('accounts.User', on_delete=models.CASCADE, related_name='tags')
+    name       = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('user', 'name')]
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class MaterialTag(models.Model):
+    """Through-table linking a Material to a Tag."""
+    material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='material_tags')
+    tag      = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='material_tags')
+
+    class Meta:
+        unique_together = [('material', 'tag')]
+
+
+class ReadingProgress(models.Model):
+    user          = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
+    material      = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='progress')
+    percent       = models.PositiveSmallIntegerField(default=0)
+    last_block_id = models.UUIDField(null=True, blank=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('user', 'material')]

@@ -40,20 +40,59 @@ class Question(models.Model):
         return f"[{self.get_question_type_display()}] {self.status.upper()} - {self.selected_text[:40]}"
 
 
-class ReviewAttempt(models.Model):
-    """Records every answer attempt during a review session. Used for future spaced repetition."""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='attempts')
-    material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name='attempts')
+from django.conf import settings
+from django.utils import timezone
+import datetime
 
-    # What the user selected (stored as JSON for flexibility across question types)
-    user_answer = models.JSONField(default=dict)
-    is_correct = models.BooleanField()
+class QuestionSchedule(models.Model):
+    """
+    Stores the Custom SRS state for one question for one user.
+    """
+    question    = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name='schedules'
+    )
+    user        = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='question_schedules'
+    )
 
-    attempted_at = models.DateTimeField(auto_now_add=True)
+    # ── Custom SRS fields ─────────────────────────────────────────────────────
+    scheduled_date  = models.DateField(db_index=True)       # date this question enters the queue
+    streak          = models.PositiveSmallIntegerField(default=0)  # consecutive correct answers in current session
+    review_count    = models.PositiveIntegerField(default=0)       # total times previously mastered
+    last_reviewed   = models.DateTimeField(null=True, blank=True)
+    mastered_at     = models.DateTimeField(null=True, blank=True)  # last time streak hit 3
+    available_at    = models.DateTimeField(null=True, blank=True, help_text="Used for intra-session minute delays")
 
     class Meta:
-        ordering = ['-attempted_at']
+        unique_together = [('question', 'user')]
+        ordering = ['scheduled_date']
 
     def __str__(self):
-        return f"Attempt on [{self.question_id}] — {'✓' if self.is_correct else '✗'}"
+        return f"Schedule [{self.question_id}] due {self.scheduled_date}"
+
+class DailyStudyLog(models.Model):
+    """
+    One row per user per calendar day. Updated in real-time on every answer.
+    Used to compute streaks and dashboard metrics efficiently.
+    """
+    user         = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='study_logs'
+    )
+    date         = models.DateField(db_index=True)
+    reviewed     = models.PositiveIntegerField(default=0)   # total answers submitted today
+    created      = models.PositiveIntegerField(default=0)   # questions approved today
+    review_streak_met    = models.BooleanField(default=False)       # reviewed >= 120
+    creation_streak_met  = models.BooleanField(default=False)       # created >= 50
+
+    class Meta:
+        unique_together = [('user', 'date')]
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"Log [{self.user_id}] {self.date} — {self.reviewed} reviewed"

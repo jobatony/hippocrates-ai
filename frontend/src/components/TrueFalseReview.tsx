@@ -3,8 +3,9 @@ import type { Question, TrueFalsePayload, TrueFalseStatementPayload } from '../s
 
 interface Props {
   question: Question;
-  onAnswer: (correct: boolean) => void;
   onNext: () => void;
+  onPrev: () => void;
+  isFirstQuestion?: boolean;
   isLastQuestion?: boolean;
 }
 
@@ -15,7 +16,7 @@ interface ShownStatement {
   isTrue: boolean;
 }
 
-export const TrueFalseReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQuestion = false }) => {
+export const TrueFalseReview: React.FC<Props> = ({ question, onNext, onPrev, isFirstQuestion = false, isLastQuestion = false }) => {
   const payload = question.payload as TrueFalsePayload;
   
   const [shown, setShown] = useState<ShownStatement[]>([]);
@@ -48,13 +49,6 @@ export const TrueFalseReview: React.FC<Props> = ({ question, onAnswer, onNext, i
   const handleCheck = () => {
     if (!allSelected) return;
     setChecked(true);
-    
-    const allCorrect = shown.every((stmt, i) => {
-      const answer = selections[i] === 'true';
-      return answer === stmt.isTrue;
-    });
-    
-    onAnswer(allCorrect);
   };
 
   return (
@@ -115,7 +109,14 @@ export const TrueFalseReview: React.FC<Props> = ({ question, onAnswer, onNext, i
         })}
       </div>
 
-      <div className="mt-xl flex justify-end">
+      <div className="mt-xl flex justify-between items-center w-full">
+        <button
+          onClick={onPrev}
+          disabled={isFirstQuestion}
+          className="px-xl py-sm text-on-surface-variant hover:bg-surface-container-high rounded-full disabled:opacity-50 transition-colors font-label-lg"
+        >
+          Previous
+        </button>
         {!checked ? (
           <button 
             onClick={handleCheck}
@@ -128,7 +129,7 @@ export const TrueFalseReview: React.FC<Props> = ({ question, onAnswer, onNext, i
           <button 
             onClick={onNext}
             className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
-          >{isLastQuestion ? 'End Review' : 'Next Question'}</button>
+          >{isLastQuestion ? 'End Review' : 'Next'}</button>
         )}
       </div>
     </div>

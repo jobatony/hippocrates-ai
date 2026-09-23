@@ -9,12 +9,13 @@ interface AppliesPayload {
 
 interface Props {
   question: Question;
-  onAnswer: (correct: boolean) => void;
   onNext: () => void;
+  onPrev: () => void;
+  isFirstQuestion?: boolean;
   isLastQuestion?: boolean;
 }
 
-export const AppliesReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQuestion = false }) => {
+export const AppliesReview: React.FC<Props> = ({ question, onNext, onPrev, isFirstQuestion = false, isLastQuestion = false }) => {
   const payload = question.payload as AppliesPayload;
   const [shuffledOptions] = useState(() => {
     const all = [...payload.correct_options, ...payload.wrong_options];
@@ -33,20 +34,6 @@ export const AppliesReview: React.FC<Props> = ({ question, onAnswer, onNext, isL
 
   const handleCheck = () => {
     setChecked(true);
-    let allCorrectSelected = true;
-    let noWrongSelected = true;
-
-    for (const opt of payload.correct_options) {
-      const idx = shuffledOptions.indexOf(opt);
-      if (!selectedIndices.has(idx)) allCorrectSelected = false;
-    }
-
-    for (const opt of payload.wrong_options) {
-      const idx = shuffledOptions.indexOf(opt);
-      if (selectedIndices.has(idx)) noWrongSelected = false;
-    }
-
-    onAnswer(allCorrectSelected && noWrongSelected);
   };
 
   const getOptionClass = (index: number) => {
@@ -90,7 +77,14 @@ export const AppliesReview: React.FC<Props> = ({ question, onAnswer, onNext, isL
         ))}
       </div>
 
-      <div className="mt-xl flex justify-end">
+      <div className="mt-xl flex justify-between items-center w-full">
+        <button
+          onClick={onPrev}
+          disabled={isFirstQuestion}
+          className="px-xl py-sm text-on-surface-variant hover:bg-surface-container-high rounded-full disabled:opacity-50 transition-colors font-label-lg"
+        >
+          Previous
+        </button>
         {!checked ? (
           <button 
             onClick={handleCheck}
@@ -102,7 +96,7 @@ export const AppliesReview: React.FC<Props> = ({ question, onAnswer, onNext, isL
           <button 
             onClick={onNext}
             className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
-          >{isLastQuestion ? 'End Review' : 'Next Question'}</button>
+          >{isLastQuestion ? 'End Review' : 'Next'}</button>
         )}
       </div>
     </div>

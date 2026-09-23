@@ -1,3 +1,4 @@
+import React from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AuthUser } from '../api';
@@ -22,6 +23,9 @@ export interface Material {
   title: string;
   status: 'pending' | 'parsing' | 'ready' | 'failed';
   created_at: string;
+  tags: { id: string; name: string }[];
+  question_count: number;
+  reading_progress: number;
 }
 
 export interface MCQPayload {
@@ -95,10 +99,6 @@ interface AppState {
   activeMaterialTitle: string;
   setActiveMaterial: (id: string, title: string) => void;
 
-  // Read progress
-  scrollProgress: number;
-  setScrollProgress: (progress: number) => void;
-
   // Document blocks
   documentBlocks: Block[];
   isLoadingDocument: boolean;
@@ -128,6 +128,31 @@ interface AppState {
   activeRequestCount: number;
   incrementActiveRequests: () => void;
   decrementActiveRequests: () => void;
+
+  // New features
+  tags: import('../api').ApiTag[];
+  activeTagId: string | null;
+  setTags: (tags: import('../api').ApiTag[]) => void;
+  addTag: (tag: import('../api').ApiTag) => void;
+  removeTag: (id: string) => void;
+  renameTagInStore: (id: string, name: string) => void;
+  setActiveTagId: (id: string | null) => void;
+
+  flagBlockId: string | null;
+  setFlagBlockId: (id: string | null) => void;
+
+  searchQuery: string;
+  searchResults: Material[] | null;
+  setSearchQuery: (q: string) => void;
+  setSearchResults: (results: Material[] | null) => void;
+
+  // Dashboard & Quiz
+  dashboardStats: import('../api').DashboardStats | null;
+  setDashboardStats: (stats: import('../api').DashboardStats | null) => void;
+
+  quizSession: import('../api').QuizSession | null;
+  setQuizSession: (session: import('../api').QuizSession | null) => void;
+  updateQuizSession: (patch: Partial<import('../api').QuizSession>) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -166,9 +191,6 @@ export const useStore = create<AppState>()(
   activeMaterialId: null,
   activeMaterialTitle: '',
   setActiveMaterial: (id, title) => set({ activeMaterialId: id, activeMaterialTitle: title }),
-
-  scrollProgress: 0,
-  setScrollProgress: (progress) => set({ scrollProgress: progress }),
 
   // Document blocks — start EMPTY, filled by API
   documentBlocks: [],
@@ -232,6 +254,39 @@ export const useStore = create<AppState>()(
   activeRequestCount: 0,
   incrementActiveRequests: () => set(state => ({ activeRequestCount: state.activeRequestCount + 1 })),
   decrementActiveRequests: () => set(state => ({ activeRequestCount: Math.max(0, state.activeRequestCount - 1) })),
+
+  // New features
+  tags: [],
+  activeTagId: null,
+  setTags: (tags) => set({ tags }),
+  addTag: (tag) => set(state => ({
+    tags: [...state.tags, tag].sort((a, b) => b.material_count - a.material_count)
+  })),
+  removeTag: (id) => set(state => ({ tags: state.tags.filter(t => t.id !== id) })),
+  renameTagInStore: (id, name) => set(state => ({
+    tags: state.tags.map(t => t.id === id ? { ...t, name } : t)
+  })),
+  setActiveTagId: (id) => set({ activeTagId: id }),
+
+  flagBlockId: null,
+  setFlagBlockId: (id) => set({ flagBlockId: id }),
+
+  searchQuery: '',
+  searchResults: null,
+  setSearchQuery: (q) => set({ searchQuery: q }),
+  setSearchResults: (results) => set({ searchResults: results }),
+
+  // Dashboard & Quiz
+  dashboardStats: null,
+  setDashboardStats: (stats) => set({ dashboardStats: stats }),
+
+  quizSession: null,
+  setQuizSession: (session) => set({ quizSession: session }),
+  updateQuizSession: (sessionPatch) => set(state => ({
+    quizSession: state.quizSession
+      ? { ...state.quizSession, ...sessionPatch }
+      : null,
+  })),
 }), {
   name: 'hippocrates-storage',
   partialize: (state) => ({
@@ -245,15 +300,46 @@ export const useStore = create<AppState>()(
 export const useDocumentTree = () => {
   const blocks = useStore(state => state.documentBlocks);
 
-  const buildTree = (parentId: string | null = null): (Block & { children: Block[] })[] => {
-    return blocks
-      .filter(block => block.parent_id === parentId)
-      .sort((a, b) => a.order - b.order)
-      .map(block => ({
-        ...block,
-        children: buildTree(block.id)
-      }));
-  };
+  return React.useMemo(() => {
+    if (!blocks || blocks.length === 0) return [];
 
-  return buildTree(null);
+    // O(N) tree building
+    const blockMap = new Map<string, Block & { children: Block[] }>();
+    const roots: (Block & { children: Block[] })[] = [];
+
+    // First pass: create all node objects
+    for (const block of blocks) {
+      blockMap.set(block.id, { ...block, children: [] });
+    }
+
+    // Second pass: attach children to parents
+    for (const block of blocks) {
+      const node = blockMap.get(block.id)!;
+      if (block.parent_id) {
+        const parent = blockMap.get(block.parent_id);
+        if (parent) {
+          // Add to parent's children cast as the extended type
+          parent.children.push(node as any);
+        } else {
+          // Parent not found, treat as root to avoid orphan loss
+          roots.push(node as any);
+        }
+      } else {
+        roots.push(node as any);
+      }
+    }
+
+    // Sort children
+    const sortTree = (nodes: any[]) => {
+      nodes.sort((a, b) => a.order - b.order);
+      for (const node of nodes) {
+        if (node.children.length > 0) {
+          sortTree(node.children);
+        }
+      }
+    };
+
+    sortTree(roots);
+    return roots;
+  }, [blocks]);
 };

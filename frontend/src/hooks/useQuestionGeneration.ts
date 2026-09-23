@@ -1,10 +1,17 @@
 import { useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { generateQuestion as apiGenerateQuestion, fetchQuestions } from '../api';
-import type { Question } from '../store/useStore';
+import { generateQuestion as apiGenerateQuestion, fetchQuestions, saveReadingProgress } from '../api';
+import type { Question, Block } from '../store/useStore';
 
 const MAX_CONCURRENT = 7;
 const MAX_QUEUE = 20;
+
+const computeProgressFromBlock = (blockId: string, blocks: Block[]): number => {
+  const sorted = [...blocks].sort((a, b) => a.order - b.order);
+  const index  = sorted.findIndex(b => b.id === blockId);
+  if (index < 0 || sorted.length === 0) return 0;
+  return Math.round(((index + 1) / sorted.length) * 100);
+};
 
 export async function triggerGeneration(
   blockId: string,
@@ -20,7 +27,9 @@ export async function triggerGeneration(
     decrementActiveRequests, 
     addPendingQuestion, 
     addFailedQuestion,
-    setLastPromptSent 
+    setLastPromptSent,
+    setFlagBlockId,
+    documentBlocks
   } = store;
 
   // Gate check
@@ -40,6 +49,12 @@ export async function triggerGeneration(
     if (newQuestion.prompt_sent) {
       setLastPromptSent(newQuestion.prompt_sent);
     }
+    
+    // Feature 3: Flag to continue & Progress
+    const progress = computeProgressFromBlock(blockId, documentBlocks as Block[]);
+    await saveReadingProgress(materialId, progress, blockId);
+    setFlagBlockId(blockId);
+    
   } catch (err: any) {
     console.error("Generation failed:", err);
     const failedQuestion: Question = {

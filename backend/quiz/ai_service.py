@@ -9,8 +9,11 @@ from .schemas import MCQSchema, TrueFalseSchema, FillInSchema, AppliesSchema
 
 logger = logging.getLogger(__name__)
 
-# Initialize Gemini client using the new SDK
-client = genai.Client(api_key=settings.GEMINI_API_KEY)
+def get_client():
+    api_key = getattr(settings, 'GEMINI_API_KEY', '')
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY is not configured. Please set GEMINI_API_KEY in your .env file.")
+    return genai.Client(api_key=api_key)
 
 class GenerationValidationError(Exception):
     pass
@@ -122,6 +125,8 @@ TARGET TEXT (The question MUST be specifically about this text):
 {selected_text}
 <</SELECTED>>
 
+STYLE RULE: Make the questions sound like standalone medical board questions. NEVER use opening phrases such as "According to the text", "From the source", "Based on the text provided", etc.
+
 STRICT OUTPUT RULE: Return ONLY a valid JSON object. Do NOT include any reasoning, chain-of-thought, notes, commentary, explanations, or filler text anywhere in the output — not inside any field and not outside the JSON object. Your entire response must be the JSON object and nothing else.
 """
 
@@ -151,8 +156,10 @@ STRICT OUTPUT RULE: Return ONLY a valid JSON object. Do NOT include any reasonin
             "]}"
         ),
         'fill_in': (
-            "Generate a fill-in-the-gap question. Select 2 to 5 key medical concepts from the target text and replace them with {gap_0}, {gap_1}, etc. "
+            "Generate a fill-in-the-gap question based on the target text. Select 2 to 5 key medical concepts and replace them with {gap_0}, {gap_1}, etc. "
             "(use single curly braces and 0-based numbering). "
+            "CRITICAL INSTRUCTION: Do NOT simply copy and paste the target text. Re-write and provide enough context in the sentence(s) so that the question is fully self-contained. "
+            "A student who has not read the specific target text, but knows the medical topic, MUST be able to comprehend the sentence and confidently deduce the correct answers based on their general medical knowledge. "
             "IMPORTANT: A gap can be a single word OR a multi-word phrase — choose whichever best represents the key medical concept "
             "(e.g. 'female Anopheles mosquito', 'oxidative phosphorylation', or 'Plasmodium falciparum' are all valid gaps). "
             "Provide an answer bank where the total number of items is exactly twice the number of gaps: "
@@ -203,6 +210,7 @@ STRICT OUTPUT RULE: Return ONLY a valid JSON object. Do NOT include any reasonin
 
     max_attempts = 3
     last_error = None
+    client = get_client()
 
     for attempt in range(max_attempts):
         try:

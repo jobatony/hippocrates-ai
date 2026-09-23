@@ -3,12 +3,13 @@ import type { Question, FillInPayload } from '../store/useStore';
 
 interface Props {
   question: Question;
-  onAnswer: (correct: boolean) => void;
   onNext: () => void;
+  onPrev: () => void;
+  isFirstQuestion?: boolean;
   isLastQuestion?: boolean;
 }
 
-export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQuestion = false }) => {
+export const FillInReview: React.FC<Props> = ({ question, onNext, onPrev, isFirstQuestion = false, isLastQuestion = false }) => {
   const payload = question.payload as FillInPayload;
   
   const [bank, setBank] = useState<string[]>([]);
@@ -62,10 +63,15 @@ export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext, isLa
 
   const handleCheck = () => {
     setChecked(true);
-    let allCorrect = true;
     const results: Record<number, 'correct' | 'wrong'> = {};
     
-    for (let i = 0; i < payload.gap_count; i++) {
+    // Derive the actual gap indices from the question text instead of trusting gap_count
+    const gapIndices = [...payload.question_text.matchAll(/\{gap_(\d+)\}/g)]
+      .map(m => parseInt(m[1], 10))
+      .filter((v, i, a) => a.indexOf(v) === i) // unique
+      .sort((a, b) => a - b);
+
+    for (const i of gapIndices) {
       const correctOpt = payload.answer_bank.find(opt => opt.correct_for_gaps.includes(i));
       const userText = gaps[i];
       
@@ -73,17 +79,19 @@ export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext, isLa
         results[i] = 'correct';
       } else {
         results[i] = 'wrong';
-        allCorrect = false;
       }
     }
     
     setGapResults(results);
-    onAnswer(allCorrect);
   };
 
   // Render question text with gap dropzones
-  const parts = payload.question_text.split(/({gap_\d+})/g);
-  const allGapsFilled = Object.keys(gaps).length === payload.gap_count && Object.values(gaps).every(v => v !== null);
+  const parts = payload.question_text.split(/(\{gap_\d+\})/g);
+  const gapIndicesInText = [...payload.question_text.matchAll(/\{gap_(\d+)\}/g)]
+    .map(m => parseInt(m[1], 10))
+    .filter((v, i, a) => a.indexOf(v) === i);
+  const allGapsFilled = gapIndicesInText.length > 0
+    && gapIndicesInText.every(i => gaps[i] != null && gaps[i] !== null);
 
   return (
     <div className="flex flex-col gap-md">
@@ -169,7 +177,14 @@ export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext, isLa
         </div>
       </div>
 
-      <div className="mt-xl flex justify-end">
+      <div className="mt-xl flex justify-between items-center w-full">
+        <button
+          onClick={onPrev}
+          disabled={isFirstQuestion}
+          className="px-xl py-sm text-on-surface-variant hover:bg-surface-container-high rounded-full disabled:opacity-50 transition-colors font-label-lg"
+        >
+          Previous
+        </button>
         {!checked ? (
           <button 
             onClick={handleCheck}
@@ -182,7 +197,7 @@ export const FillInReview: React.FC<Props> = ({ question, onAnswer, onNext, isLa
           <button 
             onClick={onNext}
             className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
-          >{isLastQuestion ? 'End Review' : 'Next Question'}</button>
+          >{isLastQuestion ? 'End Review' : 'Next'}</button>
         )}
       </div>
     </div>

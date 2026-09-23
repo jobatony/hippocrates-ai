@@ -5,28 +5,16 @@ import { MCQReview } from './MCQReview';
 import { TrueFalseReview } from './TrueFalseReview';
 import { FillInReview } from './FillInReview';
 import { AppliesReview } from './AppliesReview';
-import { ResultsSummary } from './ResultsSummary';
 import { EditQuestionModal } from './EditQuestionModal';
-import { logAttempt, fetchQuestions } from '../api';
+import { fetchQuestions } from '../api';
 import { Loader2 } from 'lucide-react';
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export const ReviewMode: React.FC = () => {
-  const { activeMaterialId, setQuestions, setLoadingQuestions, isLoadingQuestions, setActiveBlockId } = useStore();
+  const { activeMaterialId, setQuestions, setLoadingQuestions, isLoadingQuestions, setActiveBlockId, documentBlocks, setMode } = useStore();
 
   const [approved, setApproved] = useState<Question[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [results, setResults] = useState<{ questionId: string; correct: boolean }[]>([]);
-  const [sessionDone, setSessionDone] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(false);
 
   // Fetch the latest questions directly from the database on mount to guarantee we get all newly approved ones
@@ -38,7 +26,18 @@ export const ReviewMode: React.FC = () => {
       .then(qs => {
         setQuestions(qs);
         const approvedQs = qs.filter(q => q.status === 'approved');
-        setApproved(shuffle(approvedQs));
+        
+        // Sort sequentially by block.order
+        const blockOrderMap = new Map<string, number>();
+        documentBlocks.forEach(b => blockOrderMap.set(b.id, b.order));
+        
+        approvedQs.sort((a, b) => {
+          const orderA = a.block_id ? (blockOrderMap.get(a.block_id) ?? 0) : 0;
+          const orderB = b.block_id ? (blockOrderMap.get(b.block_id) ?? 0) : 0;
+          return orderA - orderB;
+        });
+        
+        setApproved(approvedQs);
         setHasInitialized(true);
       })
       .catch(err => {
@@ -46,7 +45,7 @@ export const ReviewMode: React.FC = () => {
         setLoadingQuestions(false);
         setHasInitialized(true);
       });
-  }, [activeMaterialId, setQuestions, setLoadingQuestions]);
+  }, [activeMaterialId, setQuestions, setLoadingQuestions, documentBlocks]);
 
   const currentQuestion = approved[currentIndex];
 
@@ -57,16 +56,17 @@ export const ReviewMode: React.FC = () => {
     }
   }, [currentIndex, currentQuestion, setActiveBlockId]);
 
-  const handleAnswer = (correct: boolean) => {
-    logAttempt(currentQuestion.id, correct, {});
-    setResults(prev => [...prev, { questionId: currentQuestion.id, correct }]);
-  };
-
   const handleNext = () => {
-    if (currentIndex + 1 >= approved.length) {
-      setSessionDone(true);
+    if (currentIndex >= approved.length - 1) {
+      setMode('read');
     } else {
       setCurrentIndex(i => i + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(i => i - 1);
     }
   };
 
@@ -88,11 +88,9 @@ export const ReviewMode: React.FC = () => {
     );
   }
 
-  if (sessionDone) {
-    return <ResultsSummary results={results} total={approved.length} />;
-  }
-
-  const progressPercent = Math.round((currentIndex / approved.length) * 100);
+  const isFirstQuestion = currentIndex === 0;
+  const isLastQuestion = currentIndex === approved.length - 1;
+  const progressPercent = Math.round(((currentIndex + 1) / approved.length) * 100);
 
   return (
     <div className="select-text flex-1 flex flex-col items-center justify-start py-xl md:py-[10vh] px-md md:px-xl gap-lg md:overflow-y-auto bg-surface">
@@ -105,9 +103,7 @@ export const ReviewMode: React.FC = () => {
         </div>
         <div className="flex justify-between items-center mb-md">
           <div className="text-label-sm text-on-surface-variant font-bold tracking-widest uppercase flex items-center gap-xs">
-            <span>Question {currentIndex + 1} / {approved.length}</span>
-            <span className="opacity-50">·</span>
-            <span>{progressPercent}% Complete</span>
+            <span>Question {currentIndex + 1} of {approved.length}</span>
           </div>
           <button
             onClick={() => setEditingQuestion(true)}
@@ -121,16 +117,16 @@ export const ReviewMode: React.FC = () => {
 
       <div className="w-full max-w-3xl">
         {currentQuestion.type === 'mcq' && (
-          <MCQReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
+          <MCQReview key={currentQuestion.id} question={currentQuestion} onNext={handleNext} onPrev={handlePrev} isLastQuestion={isLastQuestion} isFirstQuestion={isFirstQuestion} />
         )}
         {currentQuestion.type === 'true_false' && (
-          <TrueFalseReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
+          <TrueFalseReview key={currentQuestion.id} question={currentQuestion} onNext={handleNext} onPrev={handlePrev} isLastQuestion={isLastQuestion} isFirstQuestion={isFirstQuestion} />
         )}
         {currentQuestion.type === 'fill_in' && (
-          <FillInReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
+          <FillInReview key={currentQuestion.id} question={currentQuestion} onNext={handleNext} onPrev={handlePrev} isLastQuestion={isLastQuestion} isFirstQuestion={isFirstQuestion} />
         )}
         {currentQuestion.type === 'applies' && (
-          <AppliesReview key={currentQuestion.id} question={currentQuestion} onAnswer={handleAnswer} onNext={handleNext} isLastQuestion={currentIndex === approved.length - 1} />
+          <AppliesReview key={currentQuestion.id} question={currentQuestion} onNext={handleNext} onPrev={handlePrev} isLastQuestion={isLastQuestion} isFirstQuestion={isFirstQuestion} />
         )}
       </div>
 
@@ -143,4 +139,3 @@ export const ReviewMode: React.FC = () => {
     </div>
   );
 };
-

@@ -1,13 +1,22 @@
+import random
+from datetime import timedelta
+
 from django.db import transaction
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from documents.models import Block, Material
-from .models import Question
+from .models import Question, QuestionSchedule, DailyStudyLog
 from .context_builder import build_heading2_context
 from .ai_service import generate_question, GenerationValidationError
 from .serializers import QuestionSerializer
+
 
 class GenerateQuestionView(APIView):
     def post(self, request):
@@ -140,22 +149,262 @@ class QuestionListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class LogAttemptView(APIView):
-    """Logs a single review attempt. Called by the frontend after each Check Answer."""
-    def post(self, request):
-        from django.shortcuts import get_object_or_404
-        from .models import ReviewAttempt
+# ─── Dashboard ────────────────────────────────────────────────────────────────
+
+class DashboardStatsView(APIView):
+    def get(self, request):
+        user = request.user
+        today = timezone.now().date()
+
+        # Today's log (may not exist yet if no reviews done today)
+        today_log = DailyStudyLog.objects.filter(user=user, date=today).first()
+        reviewed_today = today_log.reviewed if today_log else 0
+        created_today  = today_log.created  if today_log else 0
         
-        question_id = request.data.get('question_id')
-        user_answer = request.data.get('user_answer', {})
-        is_correct = request.data.get('is_correct')
+        REVIEW_STREAK_MINIMUM = 120
+        CREATION_STREAK_MINIMUM = 50
 
-        question = get_object_or_404(Question, pk=question_id, material__user=request.user)
+        # Current month's activity
+        start_of_month = today.replace(day=1)
+        if start_of_month.month == 12:
+            end_of_month = start_of_month.replace(year=start_of_month.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            end_of_month = start_of_month.replace(month=start_of_month.month + 1, day=1) - timedelta(days=1)
 
-        attempt = ReviewAttempt.objects.create(
-            question=question,
-            material=question.material,
-            user_answer=user_answer,
-            is_correct=is_correct,
-        )
-        return Response({'id': str(attempt.id)}, status=status.HTTP_201_CREATED)
+        logs = {
+            log.date: log
+            for log in DailyStudyLog.objects.filter(
+                user=user, date__range=(start_of_month, end_of_month)
+            )
+        }
+
+        monthly_activity = []
+        current_date = start_of_month
+        while current_date <= end_of_month:
+            log = logs.get(current_date)
+            monthly_activity.append({
+                'date':     current_date.strftime('%Y-%m-%d'),
+                'reviewed': log.reviewed if log else 0,
+                'created':  log.created  if log else 0,
+                'review_streak_met': log.review_streak_met if log else False,
+                'creation_streak_met': log.creation_streak_met if log else False,
+            })
+            current_date += timedelta(days=1)
+
+        # Review Streak
+        current_review_streak = 0
+        check_date = today
+        if not (today_log and today_log.review_streak_met):
+            check_date = today - timedelta(days=1)
+        while True:
+            if DailyStudyLog.objects.filter(user=user, date=check_date, review_streak_met=True).exists():
+                current_review_streak += 1
+                check_date -= timedelta(days=1)
+            else:
+                break
+
+        # Creation Streak
+        current_creation_streak = 0
+        check_date = today
+        if not (today_log and today_log.creation_streak_met):
+            check_date = today - timedelta(days=1)
+        while True:
+            if DailyStudyLog.objects.filter(user=user, date=check_date, creation_streak_met=True).exists():
+                current_creation_streak += 1
+                check_date -= timedelta(days=1)
+            else:
+                break
+
+        # Longest Review Streak
+        all_review_days = list(DailyStudyLog.objects.filter(user=user, review_streak_met=True).order_by('date').values_list('date', flat=True))
+        longest_review_streak = 0
+        curr_len = 0
+        for i, d in enumerate(all_review_days):
+            if i > 0 and (d - all_review_days[i - 1]).days == 1:
+                curr_len += 1
+            else:
+                curr_len = 1
+            longest_review_streak = max(longest_review_streak, curr_len)
+        longest_review_streak = max(longest_review_streak, current_review_streak)
+        
+        # Longest Creation Streak
+        all_creation_days = list(DailyStudyLog.objects.filter(user=user, creation_streak_met=True).order_by('date').values_list('date', flat=True))
+        longest_creation_streak = 0
+        curr_len = 0
+        for i, d in enumerate(all_creation_days):
+            if i > 0 and (d - all_creation_days[i - 1]).days == 1:
+                curr_len += 1
+            else:
+                curr_len = 1
+            longest_creation_streak = max(longest_creation_streak, curr_len)
+        longest_creation_streak = max(longest_creation_streak, current_creation_streak)
+
+        # Due cards count
+        due_count = QuestionSchedule.objects.filter(
+            user=user, scheduled_date__lte=today, mastered_at__date__lt=today
+        ).count() + QuestionSchedule.objects.filter(
+            user=user, scheduled_date__lte=today, mastered_at__isnull=True
+        ).count()
+
+        cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
+
+        return Response({
+            "reviewed_today":  reviewed_today,
+            "review_streak_minimum": REVIEW_STREAK_MINIMUM,
+            "review_streak_met": today_log.review_streak_met if today_log else False,
+            "created_today":   created_today,
+            "creation_streak_minimum": CREATION_STREAK_MINIMUM,
+            "creation_streak_met": today_log.creation_streak_met if today_log else False,
+            "current_review_streak":  current_review_streak,
+            "current_creation_streak":  current_creation_streak,
+            "longest_review_streak":  longest_review_streak,
+            "longest_creation_streak": longest_creation_streak,
+            "monthly_activity": monthly_activity,
+            "due_count":       due_count,
+            "cards_mastered_today": cards_mastered_today,
+        })
+
+
+# ─── Quiz Session ─────────────────────────────────────────────────────────────
+
+def _card_from_schedule(schedule: QuestionSchedule) -> dict:
+    """Serialise a QuestionSchedule into a quiz card dict for the frontend."""
+    q = schedule.question
+    tag = q.material.tags.first()
+    return {
+        "id":               str(q.id),
+        "question_type":    q.question_type,
+        "material_title":   q.material.title,
+        "topic":            tag.name if tag else "General",
+        "payload":          q.payload,
+        "streak":           schedule.streak,
+        "review_count":     schedule.review_count,
+        "scheduled_date":   schedule.scheduled_date.isoformat() if schedule.scheduled_date else None,
+        "mastery_dots":     min(schedule.streak, 3),
+        "mastery_required": 3,
+        "availableAt":      int(schedule.available_at.timestamp() * 1000) if schedule.available_at else 0,
+    }
+
+
+REVIEW_STREAK_MINIMUM = 120
+SLOT_SIZE = 100
+
+class QuizSessionView(APIView):
+    def get(self, request):
+        user = request.user
+        today = timezone.now().date()
+
+        # 1. Pull all active session cards (due today or earlier, not mastered today)
+        primary_qs = QuestionSchedule.objects.filter(
+            user=user,
+            scheduled_date__lte=today
+        ).exclude(mastered_at__date=today).select_related('question__material')
+        
+        primary = list(primary_qs.order_by('review_count', 'scheduled_date'))
+        
+        # Reset streak for cards mastered on previous days returning to the queue
+        for s in primary:
+            if s.mastered_at and s.mastered_at.date() < today:
+                s.streak = 0
+                s.mastered_at = None
+                s.available_at = None
+                s.save(update_fields=['streak', 'mastered_at', 'available_at'])
+
+        # 2. Smart Future Pulling: If pool is thin, pull from future dates 
+        # (but ONLY new cards not touched today)
+        if len(primary) < REVIEW_STREAK_MINIMUM:
+            future = list(
+                QuestionSchedule.objects.filter(
+                    user=user,
+                    scheduled_date__gt=today
+                )
+                .exclude(id__in=[s.id for s in primary])
+                .exclude(last_reviewed__date=today) # exclude cards reviewed today
+                .select_related('question__material')
+                .order_by('review_count', 'scheduled_date')
+                [:(REVIEW_STREAK_MINIMUM - len(primary))]
+            )
+            for s in future:
+                if s.mastered_at and s.mastered_at.date() < today:
+                    s.streak = 0
+                    s.mastered_at = None
+                    s.available_at = None
+                    s.save(update_fields=['streak', 'mastered_at', 'available_at'])
+            primary += future
+            
+        # 3. Session Progress tracking
+        # We track how many unique cards were mastered *today* for the progress bar.
+        cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
+        session_total = len(primary) + cards_mastered_today
+        
+        if session_total == 0:
+            return Response({"session_total": 0, "completed": 0, "queue": []})
+
+        queue = [_card_from_schedule(s) for s in primary]
+
+        return Response({
+            "session_total": session_total,
+            "completed":     cards_mastered_today,
+            "queue":         queue,
+        })
+
+
+class QuizSessionAnswerView(APIView):
+    def post(self, request, pk):
+        from .srs import find_next_review_date
+        
+        correct = request.data.get('correct')
+        user = request.user
+        today = timezone.now().date()
+        
+        if correct is None:
+             return Response(
+                {'detail': 'Invalid payload. Must provide boolean "correct".'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            schedule = QuestionSchedule.objects.get(question_id=pk, user=user)
+        except QuestionSchedule.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if correct:
+            schedule.streak += 1
+        else:
+            schedule.streak = 0
+
+        schedule.last_reviewed = timezone.now()
+
+        mastered = schedule.streak >= 3
+        if mastered:
+            schedule.mastered_at = timezone.now()
+            schedule.review_count += 1
+            # Do NOT reset streak here. Wait until the card is pulled again on a future date.
+            schedule.scheduled_date = find_next_review_date(user, today)
+            schedule.available_at = None
+        else:
+            # Set available_at based on correct/incorrect
+            min_mins = 5 if correct else 3
+            max_mins = 10 if correct else 5
+            delay_mins = random.randint(min_mins, max_mins)
+            schedule.available_at = timezone.now() + timedelta(minutes=delay_mins)
+
+        schedule.save()
+
+        # Update DailyStudyLog (upsert)
+        if mastered:
+            log, _ = DailyStudyLog.objects.get_or_create(user=user, date=today, defaults={'reviewed': 0, 'created': 0})
+            # To be perfectly safe from double-counting if a bug allows mastering twice in one day,
+            # we can just recount from the database, or assume +1 is safe because of queue exclusion.
+            # Counting from DB is safest:
+            cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
+            log.reviewed = cards_mastered_today
+            log.review_streak_met = log.reviewed >= REVIEW_STREAK_MINIMUM
+            log.save(update_fields=['reviewed', 'review_streak_met'])
+
+        return Response({
+            "streak": schedule.streak,
+            "mastered": mastered,
+            "next_scheduled": schedule.scheduled_date.isoformat() if schedule.scheduled_date else None,
+            "available_at": int(schedule.available_at.timestamp() * 1000) if schedule.available_at else 0
+        })

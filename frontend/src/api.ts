@@ -80,6 +80,9 @@ export interface AuthUser {
   email: string;
   is_email_verified: boolean;
   created_at: string;
+  tags: { id: string; name: string }[];
+  question_count: number;
+  reading_progress: number;
 }
 
 export async function register(data: {
@@ -191,6 +194,9 @@ export interface ApiMaterial {
   title: string;
   status: 'pending' | 'parsing' | 'ready' | 'failed';
   created_at: string;
+  tags: { id: string; name: string }[];
+  question_count: number;
+  reading_progress: number;
 }
 
 export interface ApiBlock {
@@ -203,6 +209,7 @@ export interface ApiBlock {
 
 export interface ApiMaterialDetail extends ApiMaterial {
   blocks: ApiBlock[];
+  last_block_id: string | null;
 }
 
 export interface ApiUploadResponse {
@@ -351,3 +358,160 @@ export async function logAttempt(
     console.warn('Failed to log attempt to backend');
   });
 }
+
+// ─── Tags & Search & Progress ────────────────────────────────────────────────
+
+export interface ApiTag {
+  id: string;
+  name: string;
+  material_count: number;
+  created_at: string;
+}
+
+export async function fetchTags(): Promise<ApiTag[]> {
+  const res = await authFetch(`${BASE_URL}/tags/`);
+  if (!res.ok) throw new Error('Failed to fetch tags');
+  return res.json();
+}
+
+export async function createTag(name: string): Promise<ApiTag> {
+  const res = await authFetch(`${BASE_URL}/tags/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create tag');
+  return res.json();
+}
+
+export async function addTagToMaterial(materialId: string, tagIdOrName: { tag_id?: string; tag_name?: string }): Promise<ApiTag> {
+  const res = await authFetch(`${BASE_URL}/materials/${materialId}/tags/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tagIdOrName),
+  });
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.detail || 'Failed to add tag');
+  }
+  return res.json();
+}
+
+export async function renameTag(id: string, name: string): Promise<ApiTag> {
+  const res = await authFetch(`${BASE_URL}/tags/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to rename tag');
+  return res.json();
+}
+
+export async function deleteTag(id: string): Promise<{ affected_materials: { id: string; title: string }[] }> {
+  const res = await authFetch(`${BASE_URL}/tags/${id}/`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete tag');
+  return res.json();
+}
+
+export async function removeTagFromMaterial(materialId: string, tagId: string): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/materials/${materialId}/tags/${tagId}/`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to remove tag');
+}
+
+export async function saveReadingProgress(materialId: string, percent: number, lastBlockId: string | null): Promise<void> {
+  await authFetch(`${BASE_URL}/materials/${materialId}/progress/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ percent, last_block_id: lastBlockId }),
+  }).catch(() => console.warn('Failed to save reading progress'));
+}
+
+export async function searchMaterials(query: string): Promise<any[]> {
+  const res = await authFetch(`${BASE_URL}/materials/search/?q=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error('Search failed');
+  return res.json();
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+export interface DayActivity {
+  date: string;
+  reviewed: number;
+  created: number;
+  review_streak_met: boolean;
+  creation_streak_met: boolean;
+}
+
+export interface DashboardStats {
+  reviewed_today: number;
+  review_streak_minimum: number;
+  review_streak_met: boolean;
+
+  created_today: number;
+  creation_streak_minimum: number;
+  creation_streak_met: boolean;
+
+  current_review_streak: number;
+  current_creation_streak: number;
+  longest_review_streak: number;
+  longest_creation_streak: number;
+
+  monthly_activity: DayActivity[];
+  due_count: number;
+  cards_mastered_today: number;
+}
+
+export async function fetchDashboardStats(): Promise<DashboardStats> {
+  const res = await authFetch(`${BASE_URL}/questions/dashboard/stats/`);
+  if (!res.ok) throw new Error('Failed to fetch dashboard stats');
+  return res.json();
+}
+
+// ─── Quiz Session ─────────────────────────────────────────────────────────────
+
+export interface QuizCard {
+  id: string;
+  question_type: 'mcq' | 'true_false' | 'fill_in' | 'applies';
+  material_title: string;
+  topic: string;
+  payload: any;
+  streak: number;
+  review_count: number;
+  scheduled_date: string;
+  mastery_dots: number;
+  mastery_required: number;
+  availableAt: number;
+}
+
+export interface QuizSession {
+  session_total: number;
+  completed: number;
+  queue: QuizCard[];
+}
+
+export async function fetchQuizSession(): Promise<QuizSession> {
+  const res = await authFetch(`${BASE_URL}/questions/session/`);
+  if (!res.ok) throw new Error('Failed to load quiz session');
+  return res.json();
+}
+
+export interface AnswerResponse {
+  streak: number;
+  mastered: boolean;
+  next_scheduled: string | null;
+  available_at: number;
+}
+
+export async function submitCardAnswer(
+  cardId: string,
+  correct: boolean
+): Promise<AnswerResponse> {
+  const res = await authFetch(`${BASE_URL}/questions/session/${cardId}/answer/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ correct }),
+  });
+  if (!res.ok) throw new Error('Failed to submit answer');
+  return res.json();
+}
+

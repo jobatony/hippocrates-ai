@@ -1,9 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDocumentTree, useStore } from '../store/useStore';
 import { BlockNode } from './BlockNode';
 import { useTextSelection } from '../hooks/useTextSelection';
 import { useQuestionGeneration } from '../hooks/useQuestionGeneration';
 import { CheckSquare, Radio, Space, Loader2, FileText, ListChecks } from 'lucide-react';
+import { TagChip } from './TagChip';
+import { removeTagFromMaterial, fetchMaterials, fetchTags } from '../api';
+import { AddTagModal } from './AddTagModal';
+import { TagManagementModal } from './TagManagementModal';
 
 interface Props {
   readOnly?: boolean;
@@ -18,6 +22,8 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
   const activeMaterialId = useStore(state => state.activeMaterialId);
   const activeMaterialTitle = useStore(state => state.activeMaterialTitle);
   const isLoadingDocument = useStore(state => state.isLoadingDocument);
+  const materials = useStore(state => state.materials);
+  const activeMaterial = materials.find(m => m.id === activeMaterialId);
 
   const { generateQuestion } = useQuestionGeneration(activeMaterialId || '');
   const activeRequestCount = useStore(state => state.activeRequestCount);
@@ -25,10 +31,49 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
   const MAX_QUEUE = 20;
   const isBlocked = activeRequestCount >= MAX_CONCURRENT || (queueCount + activeRequestCount) >= MAX_QUEUE;
 
+  const [showAddTag, setShowAddTag] = useState(false);
+  const [tagToDelete, setTagToDelete] = useState<import('../api').ApiTag | null>(null);
+
+  // Defer heavy rendering on mount to prevent router hanging
+  const [isRenderReady, setIsRenderReady] = useState(false);
   useEffect(() => {
-    if (scrollToBlockId && tree.length > 0) {
+    // A small timeout allows the route transition paint to happen first
+    const timer = setTimeout(() => setIsRenderReady(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const flagBlockId = useStore(state => state.flagBlockId);
+  const documentBlocks = useStore(state => state.documentBlocks);
+
+  const findNearestHeadingId = (blocks: any[], targetId: string | null) => {
+    if (!targetId) return null;
+    const targetBlock = blocks.find(b => b.id === targetId);
+    if (!targetBlock) return targetId;
+
+    const targetOrder = targetBlock.order;
+    // Iterate backwards through blocks (assuming they are not perfectly sorted or just filter by order <= targetOrder)
+    const sortedBlocks = [...blocks].sort((a, b) => a.order - b.order);
+    let nearestHeading = targetId;
+
+    for (let i = sortedBlocks.length - 1; i >= 0; i--) {
+      const block = sortedBlocks[i];
+      if (block.order <= targetOrder && block.block_type && block.block_type.startsWith('heading_')) {
+        nearestHeading = block.id;
+        break;
+      }
+    }
+    return nearestHeading;
+  };
+
+  const displayFlagId = findNearestHeadingId(documentBlocks, flagBlockId);
+
+  useEffect(() => {
+    // If scrollToBlockId is provided (e.g. review mode), prioritize it. 
+    // Otherwise fall back to flagBlockId (resume reading).
+    const targetBlockId = scrollToBlockId || flagBlockId;
+    if (targetBlockId && tree.length > 0) {
       setTimeout(() => {
-        const el = document.getElementById(`block-${scrollToBlockId}`);
+        const el = document.getElementById(`block-${targetBlockId}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           el.classList.add('bg-primary/10', 'transition-colors', 'duration-1000');
@@ -36,36 +81,41 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
             el.classList.remove('bg-primary/10');
           }, 2000);
         }
-      }, 350); // wait for drawer transition (300ms) to complete before calculating scroll position
+      }, 400); // wait for drawer transition (300ms) to complete before calculating scroll position
     }
-  }, [scrollToBlockId, tree.length, isDrawerOpen]);
+  }, [scrollToBlockId, flagBlockId, tree.length, isDrawerOpen]);
 
-  const setScrollProgress = useStore(state => state.setScrollProgress);
-  const scrollProgress = useStore(state => state.scrollProgress);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      let currentProgress = 0;
+      if (scrollTimeoutRef.current) return;
       
-      // Desktop (container scroll)
-      if (window.innerWidth >= 768 && containerRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-        if (scrollHeight > clientHeight) {
-          currentProgress = (scrollTop / (scrollHeight - clientHeight)) * 100;
+      scrollTimeoutRef.current = setTimeout(() => {
+        let currentProgress = 0;
+        
+        // Desktop (container scroll)
+        if (window.innerWidth >= 768 && containerRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+          if (scrollHeight > clientHeight) {
+            currentProgress = (scrollTop / (scrollHeight - clientHeight)) * 100;
+          }
+        } 
+        // Mobile (window scroll)
+        else {
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const scrollHeight = document.documentElement.scrollHeight;
+          const clientHeight = document.documentElement.clientHeight;
+          if (scrollHeight > clientHeight) {
+            currentProgress = (scrollTop / (scrollHeight - clientHeight)) * 100;
+          }
         }
-      } 
-      // Mobile (window scroll)
-      else {
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollHeight = document.documentElement.scrollHeight;
-        const clientHeight = document.documentElement.clientHeight;
-        if (scrollHeight > clientHeight) {
-          currentProgress = (scrollTop / (scrollHeight - clientHeight)) * 100;
-        }
-      }
-      
-      setScrollProgress(Math.min(100, Math.max(0, currentProgress)));
+        
+        setScrollProgress(Math.min(100, Math.max(0, currentProgress)));
+        scrollTimeoutRef.current = null;
+      }, 50); // Throttle to ~20fps
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -81,6 +131,9 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
       window.removeEventListener('scroll', handleScroll);
       if (container) {
         container.removeEventListener('scroll', handleScroll);
+      }
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
       }
     };
   }, [tree.length]);
@@ -110,12 +163,11 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
     );
   }
 
-  // Loading state
-  if (isLoadingDocument) {
+  if ((isLoadingDocument && tree.length === 0) || (!isRenderReady && tree.length > 0)) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-w-0 bg-surface text-on-surface-variant">
-        <Loader2 size={32} className="animate-spin mb-md opacity-50" />
-        <p className="text-label-md opacity-50">Loading document...</p>
+      <div className="flex-1 flex flex-col items-center justify-center bg-surface min-w-0">
+         <Loader2 size={32} className="animate-spin text-primary" />
+         <p className="mt-4 text-on-surface-variant font-label-md">Loading document structure...</p>
       </div>
     );
   }
@@ -123,19 +175,21 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-surface relative md:h-full">
       {/* Read Progress Bar */}
-      <div className="sticky top-14 md:absolute md:top-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-xl px-md sm:px-xl py-2 border-b border-outline-variant transition-all">
-        <div className="max-w-3xl mx-auto flex items-center gap-sm">
-          <div className="flex-1 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
-            <div 
-              className="bg-primary h-1.5 rounded-full transition-all duration-150 ease-out" 
-              style={{ width: `${scrollProgress}%` }}
-            />
-          </div>
-          <div className="text-[11px] text-on-surface-variant font-bold font-mono w-8 text-right">
-            {Math.round(scrollProgress)}%
+      {!readOnly && (
+        <div className="sticky top-14 md:absolute md:top-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-xl px-md sm:px-xl py-2 border-b border-outline-variant transition-all">
+          <div className="max-w-3xl mx-auto flex items-center gap-sm">
+            <div className="flex-1 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-primary h-1.5 rounded-full transition-all duration-150 ease-out" 
+                style={{ width: `${scrollProgress}%` }}
+              />
+            </div>
+            <div className="text-[11px] text-on-surface-variant font-bold font-mono w-8 text-right">
+              {Math.round(scrollProgress)}%
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Scrolling Content */}
       <div
@@ -144,16 +198,72 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
         onContextMenu={handleContextMenu}
       >
         <div className="max-w-3xl mx-auto w-full relative">
-        <header className="mb-xl">
-          <h1 className="font-display-lg text-on-surface mb-sm text-[clamp(1.4rem,4vw,2.2rem)] leading-tight line-clamp-3 break-words hyphens-auto" lang="en">{activeMaterialTitle}</h1>
-          <div className="flex items-center gap-md text-label-md text-on-surface-variant">
+        <header className="mb-xl flex flex-col-reverse">
+          <div className="flex items-center gap-md text-label-md text-on-surface-variant mt-sm">
             <span>{tree.length} sections</span>
+          </div>
+
+          <h1 className="font-display-lg text-on-surface mb-xs text-[clamp(1.4rem,4vw,2.2rem)] leading-tight line-clamp-3 break-words hyphens-auto" lang="en">{activeMaterialTitle}</h1>
+
+          <div className="flex flex-wrap gap-xs mb-sm items-center">
+            {activeMaterial?.tags?.map(tag => (
+              <TagChip 
+                key={tag.id} 
+                label={tag.name} 
+                onRemove={async () => {
+                  const globalTag = useStore.getState().tags.find(t => t.id === tag.id);
+                  if (globalTag && globalTag.material_count === 1) {
+                    setTagToDelete(globalTag);
+                    return;
+                  }
+                  
+                  try {
+                    await removeTagFromMaterial(activeMaterial.id, tag.id);
+                    // Force refresh materials
+                    const updated = await fetchMaterials();
+                    useStore.getState().setMaterials(updated);
+                    // Also refresh tags
+                    const updatedTags = await fetchTags();
+                    useStore.getState().setTags(updatedTags);
+                  } catch (e) {}
+                }} 
+              />
+            ))}
+            {tagToDelete && (
+              <TagManagementModal
+                tag={tagToDelete}
+                initialView="confirmDelete"
+                onClose={() => setTagToDelete(null)}
+              />
+            )}
+            {!readOnly && (!activeMaterial?.tags || activeMaterial.tags.length < 5) && (
+              <>
+                <button 
+                  className="text-label-sm text-primary hover:underline ml-xs"
+                  onClick={() => setShowAddTag(true)}
+                >
+                  + Add Tag
+                </button>
+                {showAddTag && (
+                  <AddTagModal
+                    materialId={activeMaterial!.id}
+                    currentTags={activeMaterial?.tags ?? []}
+                    onClose={() => setShowAddTag(false)}
+                    onTagAdded={async () => {
+                      const [mats, tgs] = await Promise.all([fetchMaterials(), fetchTags()]);
+                      useStore.getState().setMaterials(mats);
+                      useStore.getState().setTags(tgs);
+                    }}
+                  />
+                )}
+              </>
+            )}
           </div>
         </header>
 
         <div className="space-y-sm">
           {tree.map((block: any) => (
-            <BlockNode key={block.id} block={block} />
+            <BlockNode key={block.id} block={block} displayFlagId={displayFlagId} />
           ))}
         </div>
 

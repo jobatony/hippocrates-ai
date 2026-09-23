@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { Question, MCQPayload, TrueFalsePayload, FillInPayload } from '../store/useStore';
 import { updateQuestionPayload } from '../api';
 import { useStore } from '../store/useStore';
-import { X, Save, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Plus, Trash2, Minus } from 'lucide-react';
 
 interface Props {
   question: Question;
@@ -179,60 +179,151 @@ export const EditQuestionModal: React.FC<Props> = ({ question, onClose }) => {
     );
   };
 
+  /** Extract ordered, unique gap indices from the question text */
+  const extractGaps = (text: string): number[] => {
+    const matches = [...text.matchAll(/\{gap_(\d+)\}/g)];
+    const seen = new Set<number>();
+    const result: number[] = [];
+    for (const m of matches) {
+      const n = parseInt(m[1], 10);
+      if (!seen.has(n)) { seen.add(n); result.push(n); }
+    }
+    return result.sort((a, b) => a - b);
+  };
+
+  /** Remove a gap and renumber the remaining ones in both text and answer_bank */
+  const removeGapAndRenumber = (fi: any, removedGap: number): any => {
+    const allGaps = extractGaps(fi.question_text);
+    const remaining = allGaps.filter((g: number) => g !== removedGap).sort((a: number, b: number) => a - b);
+    const remap: Record<number, number> = {};
+    remaining.forEach((old: number, newIdx: number) => { remap[old] = newIdx; });
+
+    let newText = fi.question_text.replace(/\{gap_(\d+)\}/g, (_: string, num: string) => {
+      const n = parseInt(num, 10);
+      if (n === removedGap) return '';
+      return `{gap_${remap[n] ?? n}}`;
+    });
+    newText = newText.replace(/  +/g, ' ').trim();
+
+    const newBank = fi.answer_bank.map((opt: any) => ({
+      ...opt,
+      correct_for_gaps: opt.correct_for_gaps
+        .filter((g: number) => g !== removedGap)
+        .map((g: number) => remap[g] ?? g),
+    }));
+
+    return { ...fi, question_text: newText, answer_bank: newBank, gap_count: remaining.length };
+  };
+
   const renderFillInForm = () => {
     const fi = payload as FillInPayload;
+    const gaps = extractGaps(fi.question_text);
+
+    const handleAddGap = () => {
+      const nextIndex = gaps.length > 0 ? Math.max(...gaps) + 1 : 0;
+      const newText = fi.question_text.trimEnd() + ` {gap_${nextIndex}}`;
+      setPayload({ ...fi, question_text: newText, gap_count: gaps.length + 1 });
+    };
+
+    const handleRemoveGap = (gapIndex: number) => {
+      setPayload(removeGapAndRenumber(fi, gapIndex));
+    };
+
+    const handleBankGapToggle = (i: number, gapIndex: number, assigned: boolean) => {
+      const newBank = fi.answer_bank.map((opt: any, idx: number) => {
+        if (idx !== i) return opt;
+        const existing = opt.correct_for_gaps.filter((g: number) => g !== gapIndex);
+        return { ...opt, correct_for_gaps: assigned ? [...existing, gapIndex].sort((a: number, b: number) => a - b) : existing };
+      });
+      setPayload({ ...fi, answer_bank: newBank });
+    };
+
     return (
       <div className="space-y-md">
+        {/* Question Text */}
         <div>
           <label className="block text-label-md text-on-surface-variant mb-xs">Question Text</label>
-          <p className="text-label-sm text-on-surface-variant opacity-70 mb-sm">
-            Use <code>{'{gap_0}'}</code>, <code>{'{gap_1}'}</code>, etc., to indicate where blanks should be.
+          <p className="text-[11px] text-on-surface-variant opacity-70 mb-sm">
+            Gaps appear as <code className="bg-surface-container-high px-1 rounded font-mono">{'{gap_0}'}</code>,{' '}
+            <code className="bg-surface-container-high px-1 rounded font-mono">{'{gap_1}'}</code>, etc. Use the buttons below to manage gaps.
           </p>
           <textarea
             value={fi.question_text}
-            onChange={e => setPayload({ ...fi, question_text: e.target.value })}
-            className="w-full min-h-[120px] p-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md text-on-surface focus:outline-none focus:border-primary"
+            onChange={e => {
+              const newGaps = extractGaps(e.target.value);
+              setPayload({ ...fi, question_text: e.target.value, gap_count: newGaps.length });
+            }}
+            className="w-full min-h-[120px] p-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md text-on-surface focus:outline-none focus:border-primary font-mono"
           />
+
+          {/* Gap chips */}
+          <div className="flex flex-wrap gap-xs mt-sm items-center">
+            <span className="text-label-xs text-on-surface-variant uppercase tracking-wider mr-xs">Gaps detected:</span>
+            {gaps.length === 0 && <span className="text-label-xs text-on-surface-variant opacity-50 italic">None</span>}
+            {gaps.map(g => (
+              <div
+                key={g}
+                className="flex items-center gap-[3px] bg-primary/10 text-primary text-label-sm px-sm py-[2px] rounded-full border border-primary/20"
+              >
+                <span>Gap {g}</span>
+                <button
+                  onClick={() => handleRemoveGap(g)}
+                  className="hover:bg-primary/20 rounded-full p-[1px] transition-colors"
+                  title={`Remove Gap ${g}`}
+                >
+                  <Minus size={10} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={handleAddGap}
+              className="flex items-center gap-xs text-primary text-label-sm border border-primary/30 px-sm py-[2px] rounded-full hover:bg-primary/10 transition-colors"
+            >
+              <Plus size={12} /> Add Gap {gaps.length > 0 ? gaps.length : 0}
+            </button>
+          </div>
         </div>
 
+        {/* Answer Bank */}
         <div>
           <label className="block text-label-md text-on-surface-variant mb-xs">Answer Bank</label>
+          <p className="text-[11px] text-on-surface-variant opacity-70 mb-sm">
+            Tick which gap each option correctly fills. Leave all unchecked for distractors.
+          </p>
           <div className="space-y-sm">
-            {fi.answer_bank.map((opt, i) => (
-              <div key={i} className="flex gap-sm items-start">
-                <div className="flex-1">
-                  <label className="text-label-sm text-on-surface-variant block mb-1">Option Text</label>
-                  <input
-                    type="text"
-                    value={opt.text}
-                    onChange={e => {
-                      const newBank = [...fi.answer_bank];
-                      newBank[i].text = e.target.value;
-                      setPayload({ ...fi, answer_bank: newBank });
-                    }}
-                    className="w-full p-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div className="w-32 shrink-0">
-                  <label className="text-label-sm text-on-surface-variant block mb-1">Target Gaps (CSV)</label>
-                  <input
-                    type="text"
-                    value={opt.correct_for_gaps.join(', ')}
-                    onChange={e => {
-                      const newBank = [...fi.answer_bank];
-                      // parse CSV to numbers
-                      const val = e.target.value;
-                      const nums = val.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-                      newBank[i].correct_for_gaps = nums;
-                      setPayload({ ...fi, answer_bank: newBank });
-                    }}
-                    placeholder="e.g. 0, 1"
-                    className="w-full p-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
-                  />
+            {fi.answer_bank.map((opt: any, i: number) => (
+              <div key={i} className="flex items-start gap-sm bg-surface-container-lowest rounded-lg border border-outline-variant p-sm">
+                <input
+                  type="text"
+                  value={opt.text}
+                  onChange={e => {
+                    const newBank = [...fi.answer_bank];
+                    newBank[i] = { ...newBank[i], text: e.target.value };
+                    setPayload({ ...fi, answer_bank: newBank });
+                  }}
+                  placeholder="Answer text…"
+                  className="flex-1 min-w-0 p-sm bg-surface border border-outline-variant rounded-lg text-body-md focus:outline-none focus:border-primary"
+                />
+                <div className="flex flex-wrap gap-sm shrink-0 items-center pt-[6px]">
+                  {gaps.length === 0 ? (
+                    <span className="text-label-xs text-on-surface-variant opacity-50 italic">No gaps</span>
+                  ) : (
+                    gaps.map(g => (
+                      <label key={g} className="flex items-center gap-[4px] cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={opt.correct_for_gaps.includes(g)}
+                          onChange={e => handleBankGapToggle(i, g, e.target.checked)}
+                          className="w-4 h-4 accent-primary rounded cursor-pointer"
+                        />
+                        <span className="text-label-xs text-on-surface-variant font-mono">Gap {g}</span>
+                      </label>
+                    ))
+                  )}
                 </div>
                 <button
-                  onClick={() => setPayload({ ...fi, answer_bank: fi.answer_bank.filter((_, idx) => idx !== i) })}
-                  className="mt-6 p-xs text-error hover:bg-error-container rounded transition-colors shrink-0"
+                  onClick={() => setPayload({ ...fi, answer_bank: fi.answer_bank.filter((_: any, idx: number) => idx !== i) })}
+                  className="mt-1 p-xs text-error hover:bg-error-container rounded transition-colors shrink-0"
                   title="Remove option"
                 >
                   <Trash2 size={18} />
@@ -241,7 +332,7 @@ export const EditQuestionModal: React.FC<Props> = ({ question, onClose }) => {
             ))}
           </div>
           <button
-            onClick={() => setPayload({ ...fi, answer_bank: [...fi.answer_bank, { text: 'New Option', correct_for_gaps: [] }] })}
+            onClick={() => setPayload({ ...fi, answer_bank: [...fi.answer_bank, { text: '', correct_for_gaps: [] }] })}
             className="mt-sm flex items-center gap-xs text-primary text-label-sm font-bold hover:underline"
           >
             <Plus size={16} /> Add Answer Option
@@ -250,6 +341,7 @@ export const EditQuestionModal: React.FC<Props> = ({ question, onClose }) => {
       </div>
     );
   };
+
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-md">

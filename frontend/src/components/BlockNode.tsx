@@ -1,11 +1,13 @@
 import React from 'react';
 import type { Block } from '../store/useStore';
+import { Flag } from 'lucide-react';
 
 interface BlockNodeProps {
   block: Block & { children?: (Block & { children?: any[] })[] };
+  displayFlagId?: string | null;
 }
 
-export const BlockNode: React.FC<BlockNodeProps> = ({ block }) => {
+export const BlockNode: React.FC<BlockNodeProps> = React.memo(({ block, displayFlagId = null }) => {
   const { id, block_type, text, children } = block;
 
   const renderContent = () => {
@@ -37,16 +39,26 @@ export const BlockNode: React.FC<BlockNodeProps> = ({ block }) => {
     }
   };
 
+  const isFlag = block.id === displayFlagId;
+
   return (
     <div id={`block-${id}`} data-block-id={id} className="select-text relative group p-xs -mx-xs rounded hover:bg-surface-container-lowest transition-colors">
+      {isFlag && (
+        <div
+          className="absolute -left-6 top-1/2 -translate-y-1/2 text-amber-500"
+          title="Continue from here"
+        >
+          <Flag size={14} fill="currentColor" />
+        </div>
+      )}
       {renderContent()}
       {children && children.length > 0 && (
         <div className="pl-4">
           {children.map(child => (
-            <BlockNode key={child.id} block={child} />
+            <BlockNode key={child.id} block={child} displayFlagId={displayFlagId} />
           ))}
         </div>
       )}
     </div>
   );
-};
+});

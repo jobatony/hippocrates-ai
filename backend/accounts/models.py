@@ -16,6 +16,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     is_email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    daily_goal = models.PositiveSmallIntegerField(default=50)
 
     # Use email as the login field instead of username
     USERNAME_FIELD = 'email'

@@ -3,12 +3,13 @@ import type { Question, MCQPayload } from '../store/useStore';
 
 interface Props {
   question: Question;
-  onAnswer: (correct: boolean) => void;
   onNext: () => void;
+  onPrev: () => void;
+  isFirstQuestion?: boolean;
   isLastQuestion?: boolean;
 }
 
-export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQuestion = false }) => {
+export const MCQReview: React.FC<Props> = ({ question, onNext, onPrev, isFirstQuestion = false, isLastQuestion = false }) => {
   const payload = question.payload as MCQPayload;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
@@ -16,7 +17,6 @@ export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQ
   const handleCheck = () => {
     if (selectedIndex === null) return;
     setChecked(true);
-    onAnswer(selectedIndex === payload.correct_index);
   };
 
   const getOptionClass = (index: number) => {
@@ -55,7 +55,14 @@ export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQ
         </div>
       )}
 
-      <div className="mt-xl flex justify-end">
+      <div className="mt-xl flex justify-between items-center w-full">
+        <button
+          onClick={onPrev}
+          disabled={isFirstQuestion}
+          className="px-xl py-sm text-on-surface-variant hover:bg-surface-container-high rounded-full disabled:opacity-50 transition-colors font-label-lg"
+        >
+          Previous
+        </button>
         {!checked ? (
           <button 
             onClick={handleCheck}
@@ -69,7 +76,7 @@ export const MCQReview: React.FC<Props> = ({ question, onAnswer, onNext, isLastQ
             onClick={onNext}
             className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
           >
-            {isLastQuestion ? 'End Review' : 'Next Question'}
+            {isLastQuestion ? 'End Review' : 'Next'}
           </button>
         )}
       </div>
