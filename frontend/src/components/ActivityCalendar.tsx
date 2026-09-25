@@ -116,7 +116,10 @@ export const ActivityCalendar: React.FC<Props> = ({
               {reviewed > 0 ? (
                 <div className="flex items-center justify-between">
                   {isToday ? (
-                     <span className="font-label-sm text-primary font-bold">Today</span>
+                    <>
+                      <span className="font-label-sm text-primary font-bold hidden lg:inline">Today</span>
+                      <span className={`w-2 h-2 rounded-full lg:hidden ${getDotColor(reviewed, goalMet)}`}></span>
+                    </>
                   ) : (
                      <span className={`w-2 h-2 rounded-full ${getDotColor(reviewed, goalMet)}`}></span>
                   )}
@@ -124,7 +127,8 @@ export const ActivityCalendar: React.FC<Props> = ({
                 </div>
               ) : isToday ? (
                 <div className="flex items-center justify-between">
-                   <span className="font-label-sm text-primary font-bold">Today</span>
+                   <span className="font-label-sm text-primary font-bold hidden lg:inline">Today</span>
+                   <span className="w-2 h-2 rounded-full bg-surface-variant lg:hidden"></span>
                    <span className="font-title-sm text-secondary">0</span>
                 </div>
               ) : null}
