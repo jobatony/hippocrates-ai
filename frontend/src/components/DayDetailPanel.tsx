@@ -13,7 +13,8 @@ export const DayDetailPanel: React.FC<Props> = ({ date, activity, goalMet }) => 
   const created = activity?.created || 0;
   const creationMet = activity?.creation_streak_met || false;
 
-  const dateObj = new Date(date);
+  const [year, month, day] = date.split('-').map(Number);
+  const dateObj = new Date(year, month - 1, day);
   const formattedDate = dateObj.toLocaleDateString('default', { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (

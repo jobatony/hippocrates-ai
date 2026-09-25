@@ -122,6 +122,13 @@ class QuestionDetailView(APIView):
             question.payload = payload_update
         
         if status_update in [choice[0] for choice in Question.Status.choices]:
+            # If changing to APPROVED, schedule it for tomorrow
+            if status_update == Question.Status.APPROVED and question.status != Question.Status.APPROVED:
+                QuestionSchedule.objects.get_or_create(
+                    question=question,
+                    user=request.user,
+                    defaults={'scheduled_date': timezone.now().date() + timedelta(days=1)}
+                )
             question.status = status_update
 
         question.save()
@@ -294,48 +301,57 @@ class QuizSessionView(APIView):
         user = request.user
         today = timezone.now().date()
 
-        # 1. Pull all active session cards (due today or earlier, not mastered today)
-        primary_qs = QuestionSchedule.objects.filter(
+        # 1. Pull all eligible cards
+        eligible_qs = QuestionSchedule.objects.filter(
             user=user,
             scheduled_date__lte=today
-        ).exclude(mastered_at__date=today).select_related('question__material')
+        ).exclude(mastered_at__date=today).select_related('question__material').order_by('scheduled_date')
         
-        primary = list(primary_qs.order_by('review_count', 'scheduled_date'))
+        all_eligible = list(eligible_qs)
         
         # Reset streak for cards mastered on previous days returning to the queue
-        for s in primary:
+        for s in all_eligible:
             if s.mastered_at and s.mastered_at.date() < today:
                 s.streak = 0
                 s.mastered_at = None
                 s.available_at = None
                 s.save(update_fields=['streak', 'mastered_at', 'available_at'])
 
-        # 2. Smart Future Pulling: If pool is thin, pull from future dates 
-        # (but ONLY new cards not touched today)
-        if len(primary) < REVIEW_STREAK_MINIMUM:
-            future = list(
-                QuestionSchedule.objects.filter(
-                    user=user,
-                    scheduled_date__gt=today
-                )
-                .exclude(id__in=[s.id for s in primary])
-                .exclude(last_reviewed__date=today) # exclude cards reviewed today
-                .select_related('question__material')
-                .order_by('review_count', 'scheduled_date')
-                [:(REVIEW_STREAK_MINIMUM - len(primary))]
-            )
-            for s in future:
-                if s.mastered_at and s.mastered_at.date() < today:
-                    s.streak = 0
-                    s.mastered_at = None
-                    s.available_at = None
-                    s.save(update_fields=['streak', 'mastered_at', 'available_at'])
-            primary += future
+        # 2. Quota-based Selection
+        new_cards = [s for s in all_eligible if s.review_count == 0]
+        young_cards = [s for s in all_eligible if 0 < s.review_count <= 3]
+        mature_cards = [s for s in all_eligible if s.review_count > 3]
+        
+        target_total = 30
+        quota_new = int(target_total * 0.40) # 12
+        quota_young = int(target_total * 0.35) # 10
+        quota_mature = target_total - quota_new - quota_young # 8
+        
+        def take(pool, count):
+            return pool[:count], pool[count:]
             
+        selected_new, rem_new = take(new_cards, quota_new)
+        selected_young, rem_young = take(young_cards, quota_young)
+        selected_mature, rem_mature = take(mature_cards, quota_mature)
+        
+        shortfall = target_total - (len(selected_new) + len(selected_young) + len(selected_mature))
+        if shortfall > 0:
+            remaining = rem_new + rem_young + rem_mature
+            remaining.sort(key=lambda s: s.scheduled_date)
+            selected_extra, _ = take(remaining, shortfall)
+            primary = selected_new + selected_young + selected_mature + selected_extra
+        else:
+            primary = selected_new + selected_young + selected_mature
+            
+        # Optional: you can sort primary again if you want them mixed by scheduled_date
+        # primary.sort(key=lambda s: s.scheduled_date)
+
         # 3. Session Progress tracking
         # We track how many unique cards were mastered *today* for the progress bar.
         cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
-        session_total = len(primary) + cards_mastered_today
+        # session_total dynamically reflects the full backlog, or just the current session plus completed
+        # If backlog is huge, it shows exactly what you must do today (all_eligible + mastered).
+        session_total = len(all_eligible) + cards_mastered_today
         
         if session_total == 0:
             return Response({"session_total": 0, "completed": 0, "queue": []})
@@ -378,9 +394,13 @@ class QuizSessionAnswerView(APIView):
         mastered = schedule.streak >= 3
         if mastered:
             schedule.mastered_at = timezone.now()
+            # Pass the current review_count BEFORE we increment it, so the first mastery is 0, second is 1, etc.
+            # Or pass it after incrementing? 
+            # If "first 3 reviews" means the first 3 times they review it (and master it).
+            # Let's pass the current review_count. 
+            schedule.scheduled_date = find_next_review_date(user, today, schedule.review_count)
             schedule.review_count += 1
             # Do NOT reset streak here. Wait until the card is pulled again on a future date.
-            schedule.scheduled_date = find_next_review_date(user, today)
             schedule.available_at = None
         else:
             # Set available_at based on correct/incorrect

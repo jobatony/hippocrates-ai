@@ -43,7 +43,15 @@ export const ActivityCalendar: React.FC<Props> = ({
     return 'bg-surface-variant';
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const getLocalDateString = (d: Date) => {
+    return [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0')
+    ].join('-');
+  };
+
+  const today = getLocalDateString(new Date());
 
   return (
     <div className="bg-surface-container-low rounded-2xl p-spacing-xl flex flex-col gap-spacing-lg shadow-sm">
@@ -74,7 +82,7 @@ export const ActivityCalendar: React.FC<Props> = ({
         ))}
 
         {daysInMonth.map((d) => {
-          const dateStr = d.toISOString().split('T')[0];
+          const dateStr = getLocalDateString(d);
           const act = activity.find((a) => a.date === dateStr);
           const reviewed = act?.reviewed || 0;
           const goalMet = act?.review_streak_met || false;

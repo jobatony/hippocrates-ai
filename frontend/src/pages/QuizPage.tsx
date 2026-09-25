@@ -22,7 +22,7 @@ export const QuizPage: React.FC = () => {
     fetchQuizSession()
       .then(session => {
         setQuizSession(session);
-        setActiveQueue(session.queue);
+        setActiveQueue(session.queue.sort((a, b) => a.availableAt - b.availableAt));
       })
       .catch(err => console.error("Failed to load quiz session", err));
   }, [setQuizSession]);

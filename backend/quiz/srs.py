@@ -24,19 +24,10 @@ def requeue_delay_seconds(correct: bool) -> int:
     return minutes * 60
 
 
-def find_next_review_date(user, base_date: date) -> date:
+def find_next_review_date(user, base_date: date, review_count: int = 0) -> date:
     """
-    Find the earliest date >= base_date + BASE_INTERVAL_DAYS that has
-    fewer than SLOT_SIZE questions already scheduled for `user`.
+    Find the earliest date >= base_date + interval.
+    The interval is 3 days for the first 3 reviews, and 5 days afterwards.
     """
-    # Import here to avoid circular import
-    from quiz.models import QuestionSchedule
-
-    candidate = base_date + timedelta(days=BASE_INTERVAL_DAYS)
-    while True:
-        count = QuestionSchedule.objects.filter(
-            user=user, scheduled_date=candidate
-        ).count()
-        if count < SLOT_SIZE:
-            return candidate
-        candidate += timedelta(days=1)
+    interval_days = 3 if review_count < 3 else 5
+    return base_date + timedelta(days=interval_days)

@@ -12,7 +12,10 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { dashboardStats, setDashboardStats, currentUser, setMode, activeMaterialTitle } = useStore();
 
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const d = new Date();
+    return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+  });
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   useEffect(() => {
