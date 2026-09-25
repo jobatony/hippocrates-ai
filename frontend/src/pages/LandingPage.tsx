@@ -18,7 +18,7 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="bg-surface min-h-screen text-on-surface overflow-x-hidden">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full p-spacing-xl z-50 flex justify-between items-center bg-surface/80 backdrop-blur-md">
+      <nav className="fixed top-0 w-full py-spacing-xl px-8 md:px-16 lg:px-24 z-50 flex justify-between items-center bg-surface/80 backdrop-blur-md">
         <div className="font-title-lg font-bold text-primary">Hippocrates AI</div>
         <div className="flex gap-4">
           <button 
@@ -191,7 +191,7 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="text-3xl md:text-4xl font-display-sm text-primary">3. Mastery Learning</h3>
                 <p className="text-xl text-on-surface-variant leading-relaxed">
-                  Using modern mastery methods cement your knowledge permanently in your brain and maintain a learning streak.
+                  Using modern mastery methods, cement your knowledge permanently in your brain and maintain a learning streak.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -229,7 +229,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Footer CTA */}
-      <section className="bg-surface border-t border-surface-container-high py-32 px-spacing-xl relative overflow-hidden">
+      <section className="bg-surface border-t border-surface-container-high py-16 md:py-24 px-spacing-xl relative overflow-hidden">
         {/* Background blob for CTA */}
         <div className="absolute inset-0 pointer-events-none opacity-30 flex items-center justify-center">
            <div className="w-[800px] h-[800px] bg-primary/10 rounded-full blur-[100px]"></div>
