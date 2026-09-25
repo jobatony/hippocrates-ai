@@ -6,11 +6,11 @@ import { ActivityCalendar } from '../components/ActivityCalendar';
 import { DayDetailPanel } from '../components/DayDetailPanel';
 import { useStore } from '../store/useStore';
 import { fetchDashboardStats } from '../api';
-import { PlayCircle, BookOpen, Flame, BadgeCheck } from 'lucide-react';
+import { PlayCircle, Flame, BadgeCheck } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { dashboardStats, setDashboardStats, currentUser, setMode, activeMaterialTitle } = useStore();
+  const { dashboardStats, setDashboardStats, currentUser } = useStore();
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const d = new Date();
@@ -82,15 +82,6 @@ export const DashboardPage: React.FC = () => {
               >
                 <PlayCircle className="text-xl transition-transform group-hover:scale-110" />
                 <span className="tracking-wide">Resume Daily Review <span className="opacity-75 font-normal text-xs ml-1">({due_count} due)</span></span>
-              </button>
-              <button 
-                onClick={() => { setMode('read'); navigate('/'); }}
-                className="group flex items-center gap-3 px-6 h-14 py-3 rounded-xl bg-surface-container-high text-primary font-title-sm hover:bg-surface-bright active:scale-[0.98] transition-all"
-              >
-                <BookOpen className="text-xl text-secondary" />
-                <span className="tracking-wide truncate max-w-[250px]">
-                  {activeMaterialTitle ? `Resume Reading: ${activeMaterialTitle}` : 'Start Reading'}
-                </span>
               </button>
             </div>
           </section>
