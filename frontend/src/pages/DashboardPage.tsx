@@ -38,7 +38,7 @@ export const DashboardPage: React.FC = () => {
   const {
     reviewed_today, review_streak_minimum,
     created_today, creation_streak_minimum,
-    longest_review_streak,
+    longest_review_streak, current_review_streak,
     monthly_activity, due_count
   } = dashboardStats;
 
@@ -138,19 +138,25 @@ export const DashboardPage: React.FC = () => {
             {/* Streak */}
             <div className="bg-surface-container rounded-2xl p-spacing-xl flex flex-col justify-between shadow-sm relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Longest streak</span>
+                <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Learning Streak</span>
                 <div className="w-9 h-9 rounded-xl bg-tertiary-container/10 flex items-center justify-center text-tertiary-container">
                   <Flame size={20} />
                 </div>
               </div>
               <div className="mt-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display-sm text-display-sm text-tertiary-container tracking-tight">{longest_review_streak} Days</span>
-                  <span className="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary-fixed-dim">Record</span>
+                <div className="flex items-baseline gap-4">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-display-sm text-display-sm text-tertiary-container tracking-tight">{current_review_streak}</span>
+                    <span className="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary-fixed-dim">Current</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-display-sm text-display-sm text-outline tracking-tight opacity-70">{longest_review_streak}</span>
+                    <span className="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-surface-container-high text-outline">Record</span>
+                  </div>
                 </div>
                 <p className="font-body-sm text-body-sm text-outline mt-2 flex items-center gap-1.5">
                   <BadgeCheck size={14} className="text-tertiary-fixed-dim" />
-                  Master {review_streak_minimum}+ questions to keep your streak
+                  Keep mastering questions to extend your streak
                 </p>
               </div>
             </div>
