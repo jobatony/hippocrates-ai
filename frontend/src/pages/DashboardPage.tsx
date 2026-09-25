@@ -172,7 +172,7 @@ export const DashboardPage: React.FC = () => {
               <DayDetailPanel 
                 date={selectedDate} 
                 activity={selectedActivity} 
-                goalMet={selectedActivity?.review_streak_met || false}
+                goalMet={selectedActivity?.streak_met || false}
               />
             </div>
           </section>

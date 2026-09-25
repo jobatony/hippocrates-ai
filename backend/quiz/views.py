@@ -129,6 +129,22 @@ class QuestionDetailView(APIView):
                     user=request.user,
                     defaults={'scheduled_date': timezone.now().date() + timedelta(days=1)}
                 )
+                
+                # Update created metric and evaluate streak
+                today = timezone.now().date()
+                due_count = QuestionSchedule.objects.filter(
+                    user=request.user, scheduled_date__lte=today
+                ).exclude(mastered_at__date=today).count()
+                
+                log, _ = DailyStudyLog.objects.get_or_create(user=request.user, date=today, defaults={'reviewed': 0, 'created': 0})
+                log.created += 1
+                
+                CREATION_STREAK_MINIMUM = 50
+                REVIEW_STREAK_MINIMUM = 120
+                log.creation_streak_met = log.created >= CREATION_STREAK_MINIMUM
+                log.review_streak_met = log.reviewed >= REVIEW_STREAK_MINIMUM or due_count == 0
+                log.save(update_fields=['created', 'creation_streak_met', 'review_streak_met'])
+                
             question.status = status_update
 
         question.save()
@@ -195,56 +211,36 @@ class DashboardStatsView(APIView):
                 'created':  log.created  if log else 0,
                 'review_streak_met': log.review_streak_met if log else False,
                 'creation_streak_met': log.creation_streak_met if log else False,
+                'streak_met': (log.review_streak_met and log.creation_streak_met) if log else False,
             })
             current_date += timedelta(days=1)
 
-        # Review Streak
-        current_review_streak = 0
+        # Unified Streak Evaluation
+        current_streak = 0
         check_date = today
-        if not (today_log and today_log.review_streak_met):
-            check_date = today - timedelta(days=1)
+        if not (today_log and today_log.review_streak_met and today_log.creation_streak_met):
+            check_date -= timedelta(days=1)
         while True:
-            if DailyStudyLog.objects.filter(user=user, date=check_date, review_streak_met=True).exists():
-                current_review_streak += 1
+            if DailyStudyLog.objects.filter(user=user, date=check_date, review_streak_met=True, creation_streak_met=True).exists():
+                current_streak += 1
                 check_date -= timedelta(days=1)
             else:
                 break
 
-        # Creation Streak
-        current_creation_streak = 0
-        check_date = today
-        if not (today_log and today_log.creation_streak_met):
-            check_date = today - timedelta(days=1)
-        while True:
-            if DailyStudyLog.objects.filter(user=user, date=check_date, creation_streak_met=True).exists():
-                current_creation_streak += 1
-                check_date -= timedelta(days=1)
-            else:
-                break
-
-        # Longest Review Streak
-        all_review_days = list(DailyStudyLog.objects.filter(user=user, review_streak_met=True).order_by('date').values_list('date', flat=True))
-        longest_review_streak = 0
-        curr_len = 0
-        for i, d in enumerate(all_review_days):
-            if i > 0 and (d - all_review_days[i - 1]).days == 1:
-                curr_len += 1
-            else:
-                curr_len = 1
-            longest_review_streak = max(longest_review_streak, curr_len)
-        longest_review_streak = max(longest_review_streak, current_review_streak)
+        # Longest Unified Streak
+        all_unified_days = list(DailyStudyLog.objects.filter(
+            user=user, review_streak_met=True, creation_streak_met=True
+        ).order_by('date').values_list('date', flat=True))
         
-        # Longest Creation Streak
-        all_creation_days = list(DailyStudyLog.objects.filter(user=user, creation_streak_met=True).order_by('date').values_list('date', flat=True))
-        longest_creation_streak = 0
+        longest_streak = 0
         curr_len = 0
-        for i, d in enumerate(all_creation_days):
-            if i > 0 and (d - all_creation_days[i - 1]).days == 1:
+        for i, d in enumerate(all_unified_days):
+            if i > 0 and (d - all_unified_days[i - 1]).days == 1:
                 curr_len += 1
             else:
                 curr_len = 1
-            longest_creation_streak = max(longest_creation_streak, curr_len)
-        longest_creation_streak = max(longest_creation_streak, current_creation_streak)
+            longest_streak = max(longest_streak, curr_len)
+        longest_streak = max(longest_streak, current_streak)
 
         # Due cards count
         due_count = QuestionSchedule.objects.filter(
@@ -262,10 +258,10 @@ class DashboardStatsView(APIView):
             "created_today":   created_today,
             "creation_streak_minimum": CREATION_STREAK_MINIMUM,
             "creation_streak_met": today_log.creation_streak_met if today_log else False,
-            "current_review_streak":  current_review_streak,
-            "current_creation_streak":  current_creation_streak,
-            "longest_review_streak":  longest_review_streak,
-            "longest_creation_streak": longest_creation_streak,
+            "current_review_streak":  current_streak,
+            "current_creation_streak":  current_streak,
+            "longest_review_streak":  longest_streak,
+            "longest_creation_streak": longest_streak,
             "monthly_activity": monthly_activity,
             "due_count":       due_count,
             "cards_mastered_today": cards_mastered_today,
@@ -411,15 +407,17 @@ class QuizSessionAnswerView(APIView):
 
         schedule.save()
 
-        # Update DailyStudyLog (upsert)
+            # Update DailyStudyLog (upsert)
         if mastered:
             log, _ = DailyStudyLog.objects.get_or_create(user=user, date=today, defaults={'reviewed': 0, 'created': 0})
-            # To be perfectly safe from double-counting if a bug allows mastering twice in one day,
-            # we can just recount from the database, or assume +1 is safe because of queue exclusion.
-            # Counting from DB is safest:
             cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
             log.reviewed = cards_mastered_today
-            log.review_streak_met = log.reviewed >= REVIEW_STREAK_MINIMUM
+            
+            due_count = QuestionSchedule.objects.filter(
+                user=user, scheduled_date__lte=today
+            ).exclude(mastered_at__date=today).count()
+            
+            log.review_streak_met = log.reviewed >= REVIEW_STREAK_MINIMUM or due_count == 0
             log.save(update_fields=['reviewed', 'review_streak_met'])
 
         return Response({

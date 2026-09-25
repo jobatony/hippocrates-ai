@@ -440,6 +440,7 @@ export interface DayActivity {
   created: number;
   review_streak_met: boolean;
   creation_streak_met: boolean;
+  streak_met: boolean;
 }
 
 export interface DashboardStats {

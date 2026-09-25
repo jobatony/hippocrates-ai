@@ -124,6 +124,12 @@ export const QuizPage: React.FC = () => {
     }
   };
 
+  const displayTitle = currentCard 
+    ? (currentCard.material_title.length > 35 
+        ? currentCard.material_title.substring(0, 35) + '...' 
+        : currentCard.material_title)
+    : "";
+
   return (
     <div className="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col">
       <TopNav />
@@ -140,7 +146,7 @@ export const QuizPage: React.FC = () => {
             {currentCard && (
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-label-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                <span className="truncate max-w-[150px] sm:max-w-xs">{currentCard.topic}</span>
+                <span className="truncate max-w-[200px] sm:max-w-xs">{displayTitle}</span>
               </div>
             )}
           </div>

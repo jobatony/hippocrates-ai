@@ -85,7 +85,7 @@ export const ActivityCalendar: React.FC<Props> = ({
           const dateStr = getLocalDateString(d);
           const act = activity.find((a) => a.date === dateStr);
           const reviewed = act?.reviewed || 0;
-          const goalMet = act?.review_streak_met || false;
+          const goalMet = act?.streak_met || false;
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;
 
