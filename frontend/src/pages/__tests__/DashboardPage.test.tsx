@@ -1,3 +1,5 @@
+// @ts-nocheck
+/// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
@@ -20,9 +22,9 @@ const mockStats: api.DashboardStats = {
   current_review_streak: 55,
   due_count: 5,
   monthly_activity: [
-    { date: '2025-01-01', reviewed: 10, created: 2, streak_met: false },
-    { date: '2025-01-02', reviewed: 130, created: 50, streak_met: true },
-    { date: '2025-01-03', reviewed: 120, created: 60, streak_met: true }
+    { date: '2025-01-01', reviewed: 10, created: 2, streak_met: false, review_streak_met: false, creation_streak_met: false },
+    { date: '2025-01-02', reviewed: 130, created: 50, streak_met: true, review_streak_met: true, creation_streak_met: true },
+    { date: '2025-01-03', reviewed: 120, created: 60, streak_met: true, review_streak_met: true, creation_streak_met: true }
   ]
 };
 
@@ -81,7 +83,7 @@ describe('DashboardPage', () => {
     const customStats = {
       ...mockStats,
       monthly_activity: [
-        { date: pastDateStr, reviewed: 99, created: 30, streak_met: false },
+        { date: pastDateStr, reviewed: 99, created: 30, streak_met: false, review_streak_met: false, creation_streak_met: false },
       ]
     };
     

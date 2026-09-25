@@ -18,7 +18,7 @@ export const TopNav: React.FC = () => {
 
   const navLinks = [
     { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Library',   path: '/', onClick: () => setMode('read') },
+    { label: 'Library',   path: '/library', onClick: () => setMode('read') },
     { label: 'Quiz',      path: '/quiz' },
   ];
 

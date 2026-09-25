@@ -9,10 +9,15 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { DashboardPage } from './pages/DashboardPage';
 import { QuizPage } from './pages/QuizPage';
 
+import { LandingPage } from './pages/LandingPage';
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Landing Page */}
+        <Route path="/" element={<LandingPage />} />
+
         {/* Public auth routes */}
         <Route path="/login"           element={<LoginPage />} />
         <Route path="/register"        element={<RegisterPage />} />
@@ -20,9 +25,9 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
-        {/* Protected main app route */}
+        {/* Protected main app route (Library) */}
         <Route
-          path="/"
+          path="/library"
           element={
             <ProtectedRoute>
               <Layout />
