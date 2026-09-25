@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion } from 'motion/react';
 import { FileText, Sparkles, BrainCircuit, ArrowRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -14,27 +14,6 @@ export const LandingPage: React.FC = () => {
       navigate('/dashboard');
     }
   }, [currentUser, navigate]);
-
-  const targetRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: targetRef,
-    offset: ["start start", "end end"]
-  });
-
-  // Step 1: Upload (0 -> 0.33)
-  const opacity1 = useTransform(scrollYProgress, [0, 0.15, 0.3], [1, 1, 0]);
-  const scale1 = useTransform(scrollYProgress, [0, 0.3], [1, 0.8]);
-  const y1 = useTransform(scrollYProgress, [0, 0.3], [0, -50]);
-
-  // Step 2: Generate (0.3 -> 0.66)
-  const opacity2 = useTransform(scrollYProgress, [0.25, 0.45, 0.55, 0.65], [0, 1, 1, 0]);
-  const scale2 = useTransform(scrollYProgress, [0.3, 0.45, 0.65], [0.8, 1, 0.8]);
-  const y2 = useTransform(scrollYProgress, [0.3, 0.45, 0.65], [50, 0, -50]);
-
-  // Step 3: Master (0.65 -> 1.0)
-  const opacity3 = useTransform(scrollYProgress, [0.6, 0.8, 1], [0, 1, 1]);
-  const scale3 = useTransform(scrollYProgress, [0.65, 0.8], [0.8, 1]);
-  const y3 = useTransform(scrollYProgress, [0.65, 0.8], [50, 0]);
 
   return (
     <div className="bg-surface min-h-screen text-on-surface overflow-x-hidden">
@@ -58,7 +37,7 @@ export const LandingPage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center pt-20 overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 pointer-events-none">
           <motion.div 
@@ -78,14 +57,14 @@ export const LandingPage: React.FC = () => {
           />
         </div>
 
-        <div className="relative z-10 text-center max-w-4xl px-spacing-xl flex flex-col items-center">
+        <div className="relative z-10 text-center max-w-4xl px-spacing-xl flex flex-col items-center py-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <span className="inline-block px-4 py-1.5 rounded-full bg-surface-container-high text-primary font-label-md uppercase tracking-widest mb-6 border border-surface-container-highest">
-              The Clinical Study Pipeline
+            <span className="inline-block px-4 py-1.5 rounded-full bg-surface-container-high text-primary font-label-md tracking-widest mb-6 border border-surface-container-highest uppercase">
+              YOUR AI STUDY BUDDY
             </span>
             <h1 className="text-6xl md:text-8xl font-display-lg tracking-tight mb-8 text-on-surface">
               Read Once,<br />
@@ -94,7 +73,7 @@ export const LandingPage: React.FC = () => {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-on-surface-variant font-body-lg mb-10 max-w-2xl mx-auto leading-relaxed">
-              Hippocrates AI uses advanced generative models and spaced repetition to turn your clinical documents into long-term memory.
+              Hippocrates AI uses Artificial Intelligence to help you learn 10 X faster and strengthen recall using proven mastery learning technique
             </p>
             <button 
               onClick={() => navigate('/register')}
@@ -107,109 +86,166 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Scroll Walkthrough Section */}
-      <section ref={targetRef} className="h-[300vh] relative bg-surface-container-lowest">
-        <div className="sticky top-0 h-screen flex items-center justify-center overflow-hidden">
-          <div className="w-full max-w-6xl px-spacing-xl grid grid-cols-1 lg:grid-cols-2 gap-spacing-3xl items-center">
-            
-            {/* Text Content */}
-            <div className="relative h-[400px] flex items-center">
-              {/* Step 1 */}
-              <motion.div 
-                style={{ opacity: opacity1, scale: scale1, y: y1 }}
-                className="absolute inset-0 flex flex-col justify-center"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-6">
+      {/* How it Works Section */}
+      <section className="py-24 bg-surface-container-lowest overflow-hidden">
+        <div className="max-w-6xl mx-auto px-spacing-xl">
+          <div className="text-center mb-20">
+            <motion.h2 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              className="text-4xl md:text-5xl font-display-sm text-on-surface mb-4"
+            >
+              How it works
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ delay: 0.1 }}
+              className="text-xl text-on-surface-variant"
+            >
+              Three simple steps to build your clinical memory bank.
+            </motion.p>
+          </div>
+
+          <div className="flex flex-col gap-32">
+            {/* Step 1 */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6 }}
+              className="flex flex-col lg:flex-row items-center gap-12"
+            >
+              <div className="flex-1 space-y-6">
+                <div className="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center">
                   <FileText className="w-8 h-8 text-on-surface" />
                 </div>
-                <h2 className="text-4xl md:text-5xl font-display-sm mb-4">1. Upload your material</h2>
+                <h3 className="text-3xl md:text-4xl font-display-sm">1. Upload your material</h3>
                 <p className="text-xl text-on-surface-variant leading-relaxed">
-                  Simply upload your lecture notes, guidelines, or clinical documents. We organize your library automatically.
+                  Simply upload your lecture notes, guidelines, or clinical documents. We organize your library automatically so you can focus on learning.
                 </p>
-              </motion.div>
+              </div>
+              <div className="flex-1 w-full relative">
+                <div className="w-full aspect-video bg-surface-container rounded-3xl overflow-hidden border border-surface-container-highest shadow-2xl flex items-center justify-center p-8">
+                  <motion.div 
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                    className="w-full max-w-sm bg-surface rounded-xl border border-outline/20 p-6 shadow-sm flex flex-col gap-4"
+                  >
+                    <div className="h-4 w-3/4 bg-surface-container-highest rounded-full"></div>
+                    <div className="h-3 w-full bg-surface-container-highest rounded-full"></div>
+                    <div className="h-3 w-5/6 bg-surface-container-highest rounded-full"></div>
+                    <div className="h-3 w-full bg-surface-container-highest rounded-full"></div>
+                    <div className="h-3 w-4/5 bg-surface-container-highest rounded-full"></div>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
 
-              {/* Step 2 */}
-              <motion.div 
-                style={{ opacity: opacity2, scale: scale2, y: y2 }}
-                className="absolute inset-0 flex flex-col justify-center"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-primary-container flex items-center justify-center mb-6">
+            {/* Step 2 */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6 }}
+              className="flex flex-col lg:flex-row-reverse items-center gap-12"
+            >
+              <div className="flex-1 space-y-6">
+                <div className="w-16 h-16 rounded-2xl bg-primary-container flex items-center justify-center">
                   <Sparkles className="w-8 h-8 text-on-primary-fixed" />
                 </div>
-                <h2 className="text-4xl md:text-5xl font-display-sm mb-4">2. Generate Smart Cards</h2>
+                <h3 className="text-3xl md:text-4xl font-display-sm">2. Generate Smart Cards</h3>
                 <p className="text-xl text-on-surface-variant leading-relaxed">
-                  Our clinical AI scans your text and extracts high-yield facts, generating comprehensive flashcards instantly.
+                  Our clinical AI scans your text and extracts high-yield facts, generating comprehensive, well-structured flashcards instantly.
                 </p>
-              </motion.div>
+              </div>
+              <div className="flex-1 w-full relative">
+                <div className="w-full aspect-video bg-primary/5 rounded-3xl overflow-hidden border border-primary/10 shadow-2xl flex items-center justify-center p-8">
+                  <motion.div 
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                    className="w-full max-w-sm bg-surface-bright rounded-2xl shadow-xl border border-primary/20 flex flex-col items-center justify-center p-8 text-center"
+                  >
+                    <Sparkles className="w-12 h-12 text-primary mb-6 animate-pulse" />
+                    <div className="h-4 w-1/2 bg-primary/20 rounded-full mb-6"></div>
+                    <div className="h-3 w-3/4 bg-surface-variant rounded-full mb-3"></div>
+                    <div className="h-3 w-2/3 bg-surface-variant rounded-full"></div>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
 
-              {/* Step 3 */}
-              <motion.div 
-                style={{ opacity: opacity3, scale: scale3, y: y3 }}
-                className="absolute inset-0 flex flex-col justify-center"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-tertiary-container flex items-center justify-center mb-6 text-on-primary">
+            {/* Step 3 */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6 }}
+              className="flex flex-col lg:flex-row items-center gap-12"
+            >
+              <div className="flex-1 space-y-6">
+                <div className="w-16 h-16 rounded-2xl bg-tertiary-container flex items-center justify-center text-on-primary">
                   <BrainCircuit className="w-8 h-8" />
                 </div>
-                <h2 className="text-4xl md:text-5xl font-display-sm mb-4">3. Master with SRS</h2>
+                <h3 className="text-3xl md:text-4xl font-display-sm">3. Master with SRS</h3>
                 <p className="text-xl text-on-surface-variant leading-relaxed">
-                  Review cards using our custom Spaced Repetition System. Build a learning streak and cement knowledge permanently.
+                  Review cards using our custom Spaced Repetition System. Build a learning streak and cement knowledge permanently in your brain.
                 </p>
-              </motion.div>
-            </div>
-
-            {/* Visual Content */}
-            <div className="relative h-[400px] w-full bg-surface-container rounded-3xl overflow-hidden border border-surface-container-highest shadow-2xl flex items-center justify-center">
-              {/* Step 1 Visual */}
-              <motion.div style={{ opacity: opacity1 }} className="absolute inset-0 flex items-center justify-center bg-surface-container p-12">
-                <div className="w-full h-full max-w-sm bg-surface rounded-xl border border-outline/20 p-6 shadow-sm flex flex-col gap-4">
-                  <div className="h-4 w-3/4 bg-surface-container-highest rounded-full"></div>
-                  <div className="h-3 w-full bg-surface-container-highest rounded-full"></div>
-                  <div className="h-3 w-5/6 bg-surface-container-highest rounded-full"></div>
-                  <div className="h-3 w-full bg-surface-container-highest rounded-full"></div>
-                  <div className="h-3 w-4/5 bg-surface-container-highest rounded-full"></div>
+              </div>
+              <div className="flex-1 w-full relative">
+                <div className="w-full aspect-video bg-tertiary-container/5 rounded-3xl overflow-hidden border border-tertiary-container/10 shadow-2xl flex flex-col items-center justify-center p-8 gap-8">
+                  <div className="w-full max-w-sm flex gap-3">
+                    <motion.div 
+                      animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2, delay: 0 }}
+                      className="h-16 flex-1 bg-surface-container-high rounded-xl border-b-4 border-surface-variant"
+                    ></motion.div>
+                    <motion.div 
+                      animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+                      className="h-16 flex-1 bg-surface-container-high rounded-xl border-b-4 border-surface-variant"
+                    ></motion.div>
+                    <motion.div 
+                      animate={{ y: [0, -8, 0], scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }}
+                      className="h-16 flex-1 bg-primary rounded-xl border-b-4 border-primary-container text-on-primary flex items-center justify-center font-bold text-xl"
+                    >
+                      120
+                    </motion.div>
+                    <motion.div 
+                      animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2, delay: 1.5 }}
+                      className="h-16 flex-1 bg-surface-container-high rounded-xl border-b-4 border-surface-variant"
+                    ></motion.div>
+                  </div>
+                  <div className="flex gap-3">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className={`w-10 h-10 rounded-full ${i < 3 ? 'bg-tertiary-container' : 'bg-surface-variant'}`}></div>
+                    ))}
+                  </div>
                 </div>
-              </motion.div>
-
-              {/* Step 2 Visual */}
-              <motion.div style={{ opacity: opacity2 }} className="absolute inset-0 flex items-center justify-center bg-primary/5 p-12">
-                <div className="relative w-full max-w-sm h-64 bg-surface-bright rounded-2xl shadow-xl border border-primary/20 flex flex-col items-center justify-center p-6 text-center">
-                  <Sparkles className="w-10 h-10 text-primary mb-4 animate-pulse" />
-                  <div className="h-4 w-1/2 bg-primary/20 rounded-full mb-4"></div>
-                  <div className="h-3 w-3/4 bg-surface-variant rounded-full mb-2"></div>
-                  <div className="h-3 w-2/3 bg-surface-variant rounded-full"></div>
-                </div>
-              </motion.div>
-
-              {/* Step 3 Visual */}
-              <motion.div style={{ opacity: opacity3 }} className="absolute inset-0 flex flex-col items-center justify-center bg-tertiary-container/5 p-12 gap-6">
-                <div className="w-full max-w-sm flex gap-2">
-                  <div className="h-12 flex-1 bg-surface-container-high rounded-xl border-b-4 border-surface-variant"></div>
-                  <div className="h-12 flex-1 bg-surface-container-high rounded-xl border-b-4 border-surface-variant"></div>
-                  <div className="h-12 flex-1 bg-primary rounded-xl border-b-4 border-primary-container text-on-primary flex items-center justify-center font-bold">120</div>
-                  <div className="h-12 flex-1 bg-surface-container-high rounded-xl border-b-4 border-surface-variant"></div>
-                </div>
-                <div className="flex gap-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className={`w-8 h-8 rounded-full ${i < 3 ? 'bg-tertiary-container' : 'bg-surface-variant'}`}></div>
-                  ))}
-                </div>
-              </motion.div>
-            </div>
-
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <section className="py-spacing-3xl px-spacing-xl bg-surface border-t border-surface-container-high text-center">
-        <h2 className="text-4xl font-display-md mb-6 text-on-surface">Ready to master medicine?</h2>
-        <p className="text-xl text-on-surface-variant mb-10">Join Hippocrates AI and build your ultimate clinical memory bank.</p>
-        <button 
-          onClick={() => navigate('/register')}
-          className="px-8 py-4 rounded-2xl bg-primary text-on-primary font-title-md hover:scale-105 transition-all shadow-xl shadow-primary/20"
-        >
-          Create Free Account
-        </button>
+      {/* Footer CTA & Real Footer */}
+      <section className="bg-surface border-t border-surface-container-high">
+        <div className="py-spacing-3xl px-spacing-xl text-center">
+          <h2 className="text-4xl font-display-md mb-6 text-on-surface">Ready to master medicine?</h2>
+          <p className="text-xl text-on-surface-variant mb-10">Join Hippocrates AI and build your ultimate clinical memory bank.</p>
+          <button 
+            onClick={() => navigate('/register')}
+            className="px-8 py-4 rounded-2xl bg-primary text-on-primary font-title-md hover:scale-105 transition-all shadow-xl shadow-primary/20"
+          >
+            Create Free Account
+          </button>
+        </div>
+
+        <footer className="border-t border-surface-container-high py-8 px-spacing-xl text-center flex flex-col md:flex-row justify-center items-center gap-4 text-on-surface-variant font-body-sm">
+          <span>&copy; Joba Osagie Solutions</span>
+          <span className="hidden md:inline">•</span>
+          <span>email: <a href="mailto:jobatony23@gmail.com" className="hover:text-primary transition-colors">jobatony23@gmail.com</a></span>
+        </footer>
       </section>
     </div>
   );
