@@ -94,7 +94,7 @@ export const LandingPage: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              className="text-4xl md:text-5xl font-display-sm text-on-surface mb-4"
+              className="text-4xl md:text-5xl font-display-sm text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary-container mb-4 inline-block pb-1"
             >
               How it works
             </motion.h2>
@@ -105,7 +105,7 @@ export const LandingPage: React.FC = () => {
               transition={{ delay: 0.1 }}
               className="text-xl text-on-surface-variant"
             >
-              Three simple steps to build your clinical memory bank.
+              Three simple steps to build your ultimate knowledge bank.
             </motion.p>
           </div>
 
@@ -122,9 +122,9 @@ export const LandingPage: React.FC = () => {
                 <div className="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center">
                   <FileText className="w-8 h-8 text-on-surface" />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-display-sm">1. Upload your material</h3>
+                <h3 className="text-3xl md:text-4xl font-display-sm text-primary">1. Upload your material</h3>
                 <p className="text-xl text-on-surface-variant leading-relaxed">
-                  Simply upload your lecture notes, guidelines, or clinical documents. We organize your library automatically so you can focus on learning.
+                  Simply upload your lecture notes, documents, or study materials. We organize your library automatically so you can focus on learning.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -156,9 +156,9 @@ export const LandingPage: React.FC = () => {
                 <div className="w-16 h-16 rounded-2xl bg-primary-container flex items-center justify-center">
                   <Sparkles className="w-8 h-8 text-on-primary-fixed" />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-display-sm">2. Generate Smart Cards</h3>
+                <h3 className="text-3xl md:text-4xl font-display-sm text-primary">2. Generate Smart Cards</h3>
                 <p className="text-xl text-on-surface-variant leading-relaxed">
-                  Our clinical AI scans your text and extracts high-yield facts, generating comprehensive, well-structured flashcards instantly.
+                  Our AI helps you to extract high-end facts and generate comprehensive, well-structured quizzes and flashcards instantly.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -189,9 +189,9 @@ export const LandingPage: React.FC = () => {
                 <div className="w-16 h-16 rounded-2xl bg-tertiary-container flex items-center justify-center text-on-primary">
                   <BrainCircuit className="w-8 h-8" />
                 </div>
-                <h3 className="text-3xl md:text-4xl font-display-sm">3. Master with SRS</h3>
+                <h3 className="text-3xl md:text-4xl font-display-sm text-primary">3. Mastery Learning</h3>
                 <p className="text-xl text-on-surface-variant leading-relaxed">
-                  Review cards using our custom Spaced Repetition System. Build a learning streak and cement knowledge permanently in your brain.
+                  Using modern mastery methods cement your knowledge permanently in your brain and maintain a learning streak.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -228,25 +228,44 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer CTA & Real Footer */}
-      <section className="bg-surface border-t border-surface-container-high">
-        <div className="py-spacing-3xl px-spacing-xl text-center">
-          <h2 className="text-4xl font-display-md mb-6 text-on-surface">Ready to master medicine?</h2>
-          <p className="text-xl text-on-surface-variant mb-10">Join Hippocrates AI and build your ultimate clinical memory bank.</p>
+      {/* Footer CTA */}
+      <section className="bg-surface border-t border-surface-container-high py-32 px-spacing-xl relative overflow-hidden">
+        {/* Background blob for CTA */}
+        <div className="absolute inset-0 pointer-events-none opacity-30 flex items-center justify-center">
+           <div className="w-[800px] h-[800px] bg-primary/10 rounded-full blur-[100px]"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-4xl mx-auto text-center bg-surface-container-lowest p-12 md:p-16 rounded-[3rem] border border-surface-container-highest shadow-2xl">
+          <h2 className="text-4xl md:text-5xl font-display-lg mb-6 text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary-container">
+            Ready to learn faster and better?
+          </h2>
+          <p className="text-xl md:text-2xl text-on-surface-variant mb-10">
+            Join Hippocrates AI.
+          </p>
           <button 
             onClick={() => navigate('/register')}
-            className="px-8 py-4 rounded-2xl bg-primary text-on-primary font-title-md hover:scale-105 transition-all shadow-xl shadow-primary/20"
+            className="px-10 py-5 rounded-full bg-primary text-on-primary font-title-lg hover:scale-105 transition-all shadow-xl shadow-primary/20"
           >
             Create Free Account
           </button>
         </div>
-
-        <footer className="border-t border-surface-container-high py-8 px-spacing-xl text-center flex flex-col md:flex-row justify-center items-center gap-4 text-on-surface-variant font-body-sm">
-          <span>&copy; Joba Osagie Solutions</span>
-          <span className="hidden md:inline">•</span>
-          <span>email: <a href="mailto:jobatony23@gmail.com" className="hover:text-primary transition-colors">jobatony23@gmail.com</a></span>
-        </footer>
       </section>
+
+      {/* Real Footer */}
+      <footer className="border-t border-surface-container-high py-12 px-spacing-xl bg-surface-container-lowest">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded bg-primary text-on-primary flex items-center justify-center font-bold">H</div>
+            <span className="font-title-md font-bold text-on-surface">Hippocrates AI</span>
+          </div>
+          <div className="text-on-surface-variant font-body-sm flex flex-col md:flex-row items-center gap-2 md:gap-6">
+            <span>&copy; {new Date().getFullYear()} Joba Osagie Solutions. All rights reserved.</span>
+            <a href="mailto:jobatony23@gmail.com" className="hover:text-primary transition-colors flex items-center gap-2">
+              Contact: jobatony23@gmail.com
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
