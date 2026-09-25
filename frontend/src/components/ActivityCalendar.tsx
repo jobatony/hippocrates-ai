@@ -88,20 +88,23 @@ export const ActivityCalendar: React.FC<Props> = ({
           const goalMet = act?.streak_met || false;
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;
+          const isFuture = dateStr > today;
 
           let baseClass = getDayCellClass(reviewed, goalMet);
           if (isToday) {
             baseClass = 'bg-surface-bright shadow-lg shadow-primary-container/20 ring-2 ring-primary-container relative transform scale-[1.03]';
+          } else if (isFuture) {
+            baseClass = 'bg-surface-container-lowest opacity-20';
           }
-          if (isSelected && !isToday) {
+          if (isSelected && !isToday && !isFuture) {
             baseClass += ' ring-1 ring-secondary scale-[1.02] shadow-md';
           }
 
           return (
             <div
               key={dateStr}
-              onClick={() => onSelectDate(dateStr)}
-              className={`h-16 rounded-xl flex flex-col justify-between p-2 cursor-pointer transition-transform hover:scale-[1.02] ${baseClass}`}
+              onClick={() => { if (!isFuture) onSelectDate(dateStr) }}
+              className={`h-16 rounded-xl flex flex-col justify-between p-2 transition-transform ${isFuture ? 'cursor-not-allowed' : 'cursor-pointer hover:scale-[1.02]'} ${baseClass}`}
             >
               <div className="flex items-center justify-between">
                 <span className={`font-title-sm ${isToday ? 'text-primary font-bold' : 'text-on-surface font-label-sm'}`}>
