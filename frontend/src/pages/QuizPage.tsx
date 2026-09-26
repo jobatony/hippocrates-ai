@@ -1,15 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TopNav } from '../components/TopNav';
 import { QuizCard as QuizCardComponent } from '../components/QuizCard';
+import { AppModal } from '../components/AppModal';
+import { DocumentRenderer } from '../components/DocumentRenderer';
 import { useStore } from '../store/useStore';
-import { fetchQuizSession, submitCardAnswer } from '../api';
+import { fetchQuizSession, submitCardAnswer, fetchMaterialDetail } from '../api';
 import type { QuizCard } from '../api';
-import { X, BadgeCheck, Loader2 } from 'lucide-react';
+import { X, BadgeCheck, Loader2, FileText } from 'lucide-react';
 
 export const QuizPage: React.FC = () => {
   const navigate = useNavigate();
-  const { quizSession, setQuizSession, updateQuizSession } = useStore();
+  const { 
+    quizSession, 
+    setQuizSession, 
+    updateQuizSession,
+    activeMaterialId,
+    setActiveMaterial,
+    setDocumentBlocks,
+    setLoadingDocument,
+    setActiveBlockId
+  } = useStore();
 
   const [activeQueue, setActiveQueue] = useState<QuizCard[]>([]);
   const [currentCard, setCurrentCard] = useState<QuizCard | null>(null);
@@ -17,6 +28,13 @@ export const QuizPage: React.FC = () => {
   const [answered, setAnswered] = useState(false);
   const [wasCorrect, setWasCorrect] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const [isLoadingSource, setIsLoadingSource] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [countdownText, setCountdownText] = useState<string>('');
+
+  const lastServedTypeRef = useRef<'new' | 'review' | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -24,7 +42,8 @@ export const QuizPage: React.FC = () => {
       .then(session => {
         if (ignore) return;
         setQuizSession(session);
-        setActiveQueue(session.queue.sort((a, b) => a.availableAt - b.availableAt));
+        setHasMore(session.has_more ?? false);
+        setActiveQueue(session.queue);
       })
       .catch(err => {
         if (!ignore) console.error("Failed to load quiz session", err);
@@ -32,21 +51,103 @@ export const QuizPage: React.FC = () => {
     return () => { ignore = true; };
   }, [setQuizSession]);
 
-  // Queue runner
+  const tryBackfill = async () => {
+    if (isBackfilling || !hasMore) return;
+    const unattemptedCount = activeQueue.filter(c => c.streak === 0 && c.availableAt === 0).length;
+    if (unattemptedCount < 10) {
+      setIsBackfilling(true);
+      try {
+        const currentIds = activeQueue.map(c => c.id);
+        if (currentCard) currentIds.push(currentCard.id);
+        const res = await fetchQuizSession(currentIds);
+        if (res.queue && res.queue.length > 0) {
+          setActiveQueue(prev => {
+            const existingIds = new Set(prev.map(c => c.id));
+            if (currentCard) existingIds.add(currentCard.id);
+            const freshCards = res.queue.filter(c => !existingIds.has(c.id));
+            return [...prev, ...freshCards];
+          });
+        }
+        setHasMore(res.has_more ?? false);
+        if (res.session_total !== undefined) {
+          updateQuizSession({ session_total: res.session_total });
+        }
+      } catch (e) {
+        console.error("Backfill failed", e);
+      } finally {
+        setIsBackfilling(false);
+      }
+    }
+  };
+
+  // Queue runner with even interleaving (1 new, 1 review) and countdown
   useEffect(() => {
     const checkQueue = () => {
+      const now = Date.now();
+
+      // Update countdown timer for waiting screen if currentCard is null
       if (!currentCard && activeQueue.length > 0) {
-        const now = Date.now();
-        const availableIndex = activeQueue.findIndex(c => c.availableAt <= now);
-        if (availableIndex !== -1) {
-          const card = activeQueue[availableIndex];
+        const futureTimers = activeQueue
+          .filter(c => c.availableAt > now)
+          .map(c => c.availableAt);
+        if (futureTimers.length > 0) {
+          const earliest = Math.min(...futureTimers);
+          const diffMs = Math.max(0, earliest - now);
+          const totalSec = Math.ceil(diffMs / 1000);
+          const m = Math.floor(totalSec / 60);
+          const s = totalSec % 60;
+          setCountdownText(`${m}:${s.toString().padStart(2, '0')}`);
+        } else {
+          setCountdownText('');
+        }
+      } else {
+        setCountdownText('');
+      }
+
+      if (!currentCard && activeQueue.length > 0) {
+        // Find due reviews: previously answered, cooldown has expired
+        // A review card is EITHER:
+        // 1. streak > 0 (answered correctly at least once)
+        // 2. streak === 0 BUT availableAt > 0 (answered incorrectly at least once)
+        const dueReviews = activeQueue
+          .map((card, idx) => ({ card, idx }))
+          .filter(({ card }) => (card.streak > 0 || card.availableAt > 0) && card.availableAt <= now);
+
+        // Find new/unattempted: never answered in this session yet
+        // Strictly new cards have availableAt === 0
+        const readyNew = activeQueue
+          .map((card, idx) => ({ card, idx }))
+          .filter(({ card }) => card.streak === 0 && card.availableAt === 0);
+
+        let selectedIdx = -1;
+
+        if (dueReviews.length > 0 && readyNew.length > 0) {
+          // Even alternation: 1 new, 1 review, 1 new, 1 review
+          if (lastServedTypeRef.current === 'review') {
+            selectedIdx = readyNew[0].idx;
+            lastServedTypeRef.current = 'new';
+          } else {
+            selectedIdx = dueReviews[0].idx;
+            lastServedTypeRef.current = 'review';
+          }
+        } else if (dueReviews.length > 0) {
+          selectedIdx = dueReviews[0].idx;
+          lastServedTypeRef.current = 'review';
+        } else if (readyNew.length > 0) {
+          selectedIdx = readyNew[0].idx;
+          lastServedTypeRef.current = 'new';
+        }
+
+        if (selectedIdx !== -1) {
+          const card = activeQueue[selectedIdx];
           const newQueue = [...activeQueue];
-          newQueue.splice(availableIndex, 1);
+          newQueue.splice(selectedIdx, 1);
           setActiveQueue(newQueue);
           setCurrentCard(card);
         }
       }
     };
+
     checkQueue();
     const timer = setInterval(checkQueue, 1000);
     return () => clearInterval(timer);
@@ -65,7 +166,9 @@ export const QuizPage: React.FC = () => {
 
   const { session_total, completed } = quizSession;
 
-  if (session_total === 0 || (activeQueue.length === 0 && !currentCard)) {
+  const isSessionFinished = session_total === 0 || (activeQueue.length === 0 && !currentCard && !hasMore);
+
+  if (isSessionFinished) {
     return (
       <div className="bg-surface min-h-screen text-on-surface">
         <TopNav />
@@ -117,15 +220,40 @@ export const QuizPage: React.FC = () => {
           mastery_dots: res.streak,
           availableAt: res.available_at
         };
-        setActiveQueue(prev => [...prev, requeuedCard].sort((a, b) => a.availableAt - b.availableAt));
+        setActiveQueue(prev => [...prev, requeuedCard]);
       }
       
       setCurrentCard(null);
       setAnswered(false);
+      setTimeout(tryBackfill, 100);
     } catch (err) {
       console.error("Failed to submit answer", err);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenSourceModal = async () => {
+    if (!currentCard?.material_id) return;
+    setIsSourceModalOpen(true);
+
+    if (currentCard.block_id) {
+      setActiveBlockId(currentCard.block_id);
+    }
+
+    if (activeMaterialId !== currentCard.material_id) {
+      setIsLoadingSource(true);
+      setLoadingDocument(true);
+      try {
+        const detail = await fetchMaterialDetail(currentCard.material_id);
+        setActiveMaterial(detail.id, detail.title);
+        setDocumentBlocks(detail.blocks);
+      } catch (err) {
+        console.error("Failed to load source material", err);
+      } finally {
+        setIsLoadingSource(false);
+        setLoadingDocument(false);
+      }
     }
   };
 
@@ -143,10 +271,16 @@ export const QuizPage: React.FC = () => {
               <span className="font-label-md text-label-md hidden sm:inline">Exit</span>
             </Link>
             {currentCard && (
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-label-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                <span className="truncate max-w-[150px] sm:max-w-xs">{currentCard.material_title}</span>
-              </div>
+              <button
+                type="button"
+                onClick={handleOpenSourceModal}
+                className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary-container/30 hover:bg-secondary-container/60 text-secondary font-label-sm text-label-sm transition-all cursor-pointer border border-secondary/20 hover:border-secondary/50 shadow-sm"
+                title="Click to view source material context"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-secondary group-hover:scale-125 transition-transform"></span>
+                <span className="truncate max-w-[150px] sm:max-w-xs font-medium">{currentCard.material_title}</span>
+                <FileText size={13} className="opacity-70 group-hover:opacity-100 transition-opacity ml-0.5" />
+              </button>
             )}
           </div>
           <div className="flex items-center gap-spacing-md">
@@ -172,17 +306,17 @@ export const QuizPage: React.FC = () => {
         {!currentCard ? (
           <div className="flex flex-col items-center gap-4 text-on-surface-variant">
             <Loader2 className="animate-spin text-secondary" size={32} />
-            <p className="font-title-sm">Waiting for next card to become available...</p>
-            <p className="font-body-sm opacity-70">Taking a short break based on your re-queue timers.</p>
+            <p className="font-title-md font-semibold text-on-surface">
+              {countdownText ? `Next question ready in ${countdownText}` : "Waiting for next question..."}
+            </p>
+            <p className="font-body-sm opacity-70">
+              {isBackfilling 
+                ? "Loading more questions from your backlog..." 
+                : "Questions are cooling down to optimize memory consolidation."}
+            </p>
           </div>
         ) : (
           <div className="w-full max-w-4xl bg-surface-container rounded-2xl p-6 md:p-8 flex flex-col gap-6 shadow-2xl relative">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-outline font-label-md text-label-md">
-                <BadgeCheck size={16} className="text-secondary" />
-                <span className="uppercase tracking-wider font-semibold">Question {completed + 1} of {session_total}</span>
-              </div>
-            </div>
 
             <QuizCardComponent 
               key={currentCard.id}
@@ -230,6 +364,27 @@ export const QuizPage: React.FC = () => {
         )}
       </main>
       </div>
+
+      {isSourceModalOpen && (
+        <AppModal
+          isOpen={isSourceModalOpen}
+          onClose={() => setIsSourceModalOpen(false)}
+          title={currentCard?.material_title || "Source Document"}
+          maxWidth="4xl"
+          centerOnMobile
+        >
+          <div className="h-[65vh] flex flex-col min-h-0 -mx-xl -my-md px-md">
+            {isLoadingSource ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-xl text-on-surface-variant">
+                <Loader2 size={32} className="animate-spin text-primary mb-2" />
+                <p className="font-label-md">Loading source material...</p>
+              </div>
+            ) : (
+              <DocumentRenderer readOnly scrollToBlockId={currentCard?.block_id} />
+            )}
+          </div>
+        </AppModal>
+      )}
     </div>
   );
 };

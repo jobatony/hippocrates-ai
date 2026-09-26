@@ -473,6 +473,8 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
 export interface QuizCard {
   id: string;
   question_type: 'mcq' | 'true_false' | 'fill_in' | 'applies';
+  material_id: string;
+  block_id?: string | null;
   material_title: string;
   topic: string;
   payload: any;
@@ -488,10 +490,14 @@ export interface QuizSession {
   session_total: number;
   completed: number;
   queue: QuizCard[];
+  has_more?: boolean;
 }
 
-export async function fetchQuizSession(): Promise<QuizSession> {
-  const res = await authFetch(`${BASE_URL}/questions/session/`);
+export async function fetchQuizSession(excludeIds?: string[]): Promise<QuizSession> {
+  const query = excludeIds && excludeIds.length > 0
+    ? `?exclude_ids=${encodeURIComponent(excludeIds.join(','))}`
+    : '';
+  const res = await authFetch(`${BASE_URL}/questions/session/${query}`);
   if (!res.ok) throw new Error('Failed to load quiz session');
   return res.json();
 }

@@ -6,7 +6,7 @@ interface AppModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg';
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
   hideCloseButton?: boolean;
   heightClass?: string;
   centerOnMobile?: boolean;
@@ -39,6 +39,10 @@ export const AppModal: React.FC<AppModalProps> = ({
     sm: 'sm:max-w-sm',
     md: 'sm:max-w-md',
     lg: 'sm:max-w-lg',
+    xl: 'sm:max-w-xl',
+    '2xl': 'sm:max-w-2xl',
+    '3xl': 'sm:max-w-3xl',
+    '4xl': 'sm:max-w-4xl',
   };
 
   return (

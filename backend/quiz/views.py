@@ -277,6 +277,8 @@ def _card_from_schedule(schedule: QuestionSchedule) -> dict:
     return {
         "id":               str(q.id),
         "question_type":    q.question_type,
+        "material_id":      str(q.material_id),
+        "block_id":         str(q.source_block_id) if q.source_block_id else None,
         "material_title":   q.material.title,
         "topic":            tag.name if tag else "General",
         "payload":          q.payload,
@@ -297,11 +299,23 @@ class QuizSessionView(APIView):
         user = request.user
         today = timezone.localdate()
 
-        # 1. Pull all eligible cards
-        eligible_qs = QuestionSchedule.objects.filter(
+        # Total backlog tracking for session_total
+        cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
+        total_due_qs = QuestionSchedule.objects.filter(
             user=user,
             scheduled_date__lte=today
-        ).exclude(mastered_at__date=today).select_related('question__material').order_by('scheduled_date', 'question__created_at')
+        ).exclude(mastered_at__date=today)
+        session_total = total_due_qs.count() + cards_mastered_today
+
+        if session_total == 0:
+            return Response({"session_total": 0, "completed": 0, "queue": [], "has_more": False})
+
+        # 1. Pull eligible cards, excluding cards already active in the frontend queue
+        eligible_qs = total_due_qs.select_related('question__material').order_by('scheduled_date', 'question__created_at')
+        exclude_ids_raw = request.query_params.get('exclude_ids', '')
+        if exclude_ids_raw:
+            exclude_ids = [i.strip() for i in exclude_ids_raw.split(',') if i.strip()]
+            eligible_qs = eligible_qs.exclude(question_id__in=exclude_ids)
         
         all_eligible = list(eligible_qs)
         
@@ -341,31 +355,27 @@ class QuizSessionView(APIView):
         shortfall = target_total - (len(selected_new) + len(selected_young) + len(selected_mature))
         if shortfall > 0:
             remaining = rem_new + rem_young + rem_mature
-            remaining.sort(key=lambda s: s.scheduled_date)
+            remaining.sort(key=lambda s: (
+                0 if s.streak > 0 else 1,
+                s.available_at or timezone.now(),
+                s.scheduled_date
+            ))
             selected_extra, _ = take(remaining, shortfall)
             primary = selected_new + selected_young + selected_mature + selected_extra
         else:
             primary = selected_new + selected_young + selected_mature
             
-        # Optional: you can sort primary again if you want them mixed by scheduled_date
-        # primary.sort(key=lambda s: s.scheduled_date)
-
-        # 3. Session Progress tracking
-        # We track how many unique cards were mastered *today* for the progress bar.
-        cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
-        # session_total dynamically reflects the full backlog, or just the current session plus completed
-        # If backlog is huge, it shows exactly what you must do today (all_eligible + mastered).
-        session_total = len(all_eligible) + cards_mastered_today
-        
-        if session_total == 0:
-            return Response({"session_total": 0, "completed": 0, "queue": []})
-
         queue = [_card_from_schedule(s) for s in primary]
+        
+        # Calculate if there are more cards remaining beyond primary
+        primary_ids = [s.question_id for s in primary]
+        has_more = total_due_qs.exclude(question_id__in=primary_ids).exists()
 
         return Response({
             "session_total": session_total,
             "completed":     cards_mastered_today,
             "queue":         queue,
+            "has_more":      has_more,
         })
 
 
@@ -398,24 +408,18 @@ class QuizSessionAnswerView(APIView):
         mastered = schedule.streak >= 3
         if mastered:
             schedule.mastered_at = timezone.now()
-            # Pass the current review_count BEFORE we increment it, so the first mastery is 0, second is 1, etc.
-            # Or pass it after incrementing? 
-            # If "first 3 reviews" means the first 3 times they review it (and master it).
-            # Let's pass the current review_count. 
             schedule.scheduled_date = find_next_review_date(user, today, schedule.review_count)
             schedule.review_count += 1
             # Do NOT reset streak here. Wait until the card is pulled again on a future date.
             schedule.available_at = None
         else:
-            # Set available_at based on correct/incorrect
-            min_mins = 5 if correct else 3
-            max_mins = 10 if correct else 5
-            delay_mins = random.randint(min_mins, max_mins)
+            # Exact cooldowns: 3 mins if incorrect, 5 mins if correct
+            delay_mins = 5 if correct else 3
             schedule.available_at = timezone.now() + timedelta(minutes=delay_mins)
 
         schedule.save()
 
-            # Update DailyStudyLog (upsert)
+        # Update DailyStudyLog (upsert)
         if mastered:
             log, _ = DailyStudyLog.objects.get_or_create(user=user, date=today, defaults={'reviewed': 0, 'created': 0})
             cards_mastered_today = QuestionSchedule.objects.filter(user=user, mastered_at__date=today).count()
