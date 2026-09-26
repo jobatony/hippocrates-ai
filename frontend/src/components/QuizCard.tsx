@@ -49,21 +49,28 @@ export const QuizCard: React.FC<Props> = ({ card, answered, onRevealAnswer }) =>
 
 const MCQQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorrect: boolean) => void }> = ({ payload, answered, onReveal }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  
+  const [shuffledOptions] = useState(() => {
+    return payload.options
+      .map((text: string, originalIndex: number) => ({ text, originalIndex }))
+      .sort(() => Math.random() - 0.5);
+  });
+
   const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-  const handleSelect = (idx: number) => {
+  const handleSelect = (idx: number, originalIndex: number) => {
     if (answered) return;
     setSelectedIndex(idx);
     // Auto-reveal on select for MCQ (preserves fast Anki feel)
-    const isCorrect = idx === payload.correct_index;
+    const isCorrect = originalIndex === payload.correct_index;
     onReveal(isCorrect);
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
-      {payload.options.map((opt: string, idx: number) => {
+      {shuffledOptions.map((opt: {text: string, originalIndex: number}, idx: number) => {
         const isSelected = selectedIndex === idx;
-        const isCorrect = idx === payload.correct_index;
+        const isCorrect = opt.originalIndex === payload.correct_index;
 
         let containerClass = "group flex items-start justify-between p-4 rounded-xl cursor-pointer select-none transition-all ";
         let letterClass = "flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center font-title-sm text-title-sm transition-colors ";
@@ -101,11 +108,11 @@ const MCQQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorrect:
         }
 
         return (
-          <div key={idx} onClick={() => handleSelect(idx)} className={containerClass}>
+          <div key={idx} onClick={() => handleSelect(idx, opt.originalIndex)} className={containerClass}>
             <div className="flex items-start gap-3.5 min-w-0 flex-1">
               <span className={letterClass}>{letters[idx]}</span>
               <div className="flex flex-col">
-                <span className={textClass}>{opt}</span>
+                <span className={textClass}>{opt.text}</span>
                 {answered && isCorrect && <span className="font-label-sm text-secondary font-bold uppercase tracking-wider mt-1">Correct Answer</span>}
                 {answered && isSelected && !isCorrect && <span className="font-label-sm text-error font-bold uppercase tracking-wider mt-1">Your Answer</span>}
               </div>

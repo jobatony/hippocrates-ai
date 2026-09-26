@@ -11,6 +11,14 @@ interface Props {
 
 export const MCQReview: React.FC<Props> = ({ question, onNext, onPrev, isFirstQuestion = false, isLastQuestion = false }) => {
   const payload = question.payload as MCQPayload;
+  
+  // Shuffle options once when the component mounts
+  const [shuffledOptions] = useState(() => {
+    return payload.options
+      .map((text, originalIndex) => ({ text, originalIndex }))
+      .sort(() => Math.random() - 0.5);
+  });
+
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
 
@@ -20,12 +28,14 @@ export const MCQReview: React.FC<Props> = ({ question, onNext, onPrev, isFirstQu
   };
 
   const getOptionClass = (index: number) => {
+    const isActuallyCorrect = shuffledOptions[index].originalIndex === payload.correct_index;
+
     if (!checked) {
       return selectedIndex === index
         ? 'ring-2 ring-green-500 bg-surface-container'
         : 'hover:bg-surface-container-high';
     }
-    if (index === payload.correct_index) {
+    if (isActuallyCorrect) {
       return 'bg-green-100 border-green-500 dark:bg-green-900/30';
     }
     if (index === selectedIndex) {
@@ -38,13 +48,13 @@ export const MCQReview: React.FC<Props> = ({ question, onNext, onPrev, isFirstQu
     <div className="flex flex-col gap-md">
       <div className="font-body-lg text-on-surface mb-sm">{payload.question}</div>
       <div className="flex flex-col gap-sm">
-        {payload.options.map((opt, i) => (
+        {shuffledOptions.map((opt, i) => (
           <div 
             key={i}
             onClick={() => !checked && setSelectedIndex(i)}
             className={`p-md rounded-lg border border-outline-variant cursor-pointer transition-all break-words ${getOptionClass(i)}`}
           >
-            {opt}
+            {opt.text}
           </div>
         ))}
       </div>
