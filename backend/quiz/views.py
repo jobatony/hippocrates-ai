@@ -301,9 +301,17 @@ class QuizSessionView(APIView):
         eligible_qs = QuestionSchedule.objects.filter(
             user=user,
             scheduled_date__lte=today
-        ).exclude(mastered_at__date=today).select_related('question__material').order_by('scheduled_date')
+        ).exclude(mastered_at__date=today).select_related('question__material').order_by('scheduled_date', 'question__created_at')
         
         all_eligible = list(eligible_qs)
+        
+        # Sort in Python to heavily prioritize cards that have been started today (streak > 0)
+        # so they don't get lost in the backlog if the user refreshes the page.
+        from datetime import datetime
+        all_eligible.sort(key=lambda s: (
+            0 if s.streak > 0 else 1,
+            s.available_at or timezone.now()
+        ))
         
         # Reset streak for cards mastered on previous days returning to the queue
         for s in all_eligible:
