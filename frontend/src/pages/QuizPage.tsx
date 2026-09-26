@@ -19,12 +19,17 @@ export const QuizPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    let ignore = false;
     fetchQuizSession()
       .then(session => {
+        if (ignore) return;
         setQuizSession(session);
         setActiveQueue(session.queue.sort((a, b) => a.availableAt - b.availableAt));
       })
-      .catch(err => console.error("Failed to load quiz session", err));
+      .catch(err => {
+        if (!ignore) console.error("Failed to load quiz session", err);
+      });
+    return () => { ignore = true; };
   }, [setQuizSession]);
 
   // Queue runner
@@ -140,7 +145,7 @@ export const QuizPage: React.FC = () => {
             {currentCard && (
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-label-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                <span className="truncate max-w-[150px] sm:max-w-xs">{currentCard.topic}</span>
+                <span className="truncate max-w-[150px] sm:max-w-xs">{currentCard.material_title}</span>
               </div>
             )}
           </div>
@@ -228,3 +233,4 @@ export const QuizPage: React.FC = () => {
     </div>
   );
 };
+

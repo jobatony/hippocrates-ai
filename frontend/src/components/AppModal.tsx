@@ -9,6 +9,7 @@ interface AppModalProps {
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg';
   hideCloseButton?: boolean;
   heightClass?: string;
+  centerOnMobile?: boolean;
 }
 
 export const AppModal: React.FC<AppModalProps> = ({
@@ -19,6 +20,7 @@ export const AppModal: React.FC<AppModalProps> = ({
   maxWidth = 'sm',
   hideCloseButton = false,
   heightClass = '',
+  centerOnMobile = false,
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -40,9 +42,9 @@ export const AppModal: React.FC<AppModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-filter backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-md">
+    <div className={`fixed inset-0 bg-black/40 backdrop-filter backdrop-blur-md z-[100] flex justify-center p-md sm:p-md ${centerOnMobile ? 'items-center' : 'items-end sm:items-center'}`}>
       <div className="absolute inset-0 z-0" onClick={onClose} />
-      <div className={`relative z-10 bg-surface-container-highest rounded-t-2xl sm:rounded-2xl p-xl w-full shadow-2xl flex flex-col ${maxWidthClasses[maxWidth]} ${heightClass}`}>
+      <div className={`relative z-10 bg-surface-container-highest w-full shadow-2xl flex flex-col p-xl ${maxWidthClasses[maxWidth]} ${heightClass} ${centerOnMobile ? 'rounded-2xl max-h-[90dvh]' : 'rounded-t-2xl sm:rounded-2xl max-h-[90dvh] sm:max-h-[90dvh]'}`}>
         {(title || !hideCloseButton) && (
           <div className="flex justify-between items-center mb-lg shrink-0">
             {title ? <h2 className="font-headline-md text-on-surface">{title}</h2> : <div />}

@@ -127,11 +127,11 @@ class QuestionDetailView(APIView):
                 QuestionSchedule.objects.get_or_create(
                     question=question,
                     user=request.user,
-                    defaults={'scheduled_date': timezone.now().date() + timedelta(days=1)}
+                    defaults={'scheduled_date': timezone.localdate() + timedelta(days=1)}
                 )
                 
                 # Update created metric and evaluate streak
-                today = timezone.now().date()
+                today = timezone.localdate()
                 due_count = QuestionSchedule.objects.filter(
                     user=request.user, scheduled_date__lte=today
                 ).exclude(mastered_at__date=today).count()
@@ -177,7 +177,7 @@ class QuestionListView(APIView):
 class DashboardStatsView(APIView):
     def get(self, request):
         user = request.user
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         # Today's log (may not exist yet if no reviews done today)
         today_log = DailyStudyLog.objects.filter(user=user, date=today).first()
@@ -295,7 +295,7 @@ SLOT_SIZE = 100
 class QuizSessionView(APIView):
     def get(self, request):
         user = request.user
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         # 1. Pull all eligible cards
         eligible_qs = QuestionSchedule.objects.filter(
@@ -367,7 +367,7 @@ class QuizSessionAnswerView(APIView):
         
         correct = request.data.get('correct')
         user = request.user
-        today = timezone.now().date()
+        today = timezone.localdate()
         
         if correct is None:
              return Response(

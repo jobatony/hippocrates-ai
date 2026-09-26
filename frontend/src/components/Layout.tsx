@@ -3,16 +3,15 @@ import { DocumentRenderer } from './DocumentRenderer';
 import { QuestionCard } from './QuestionCard';
 import { ReviewMode } from './ReviewMode';
 import { useStore } from '../store/useStore';
-import { Book, Settings, Plus, User, Upload, Loader2, X, Menu, ClipboardList, MoreVertical, Pencil, Trash2, Search } from 'lucide-react';
-import { fetchMaterials, fetchMaterialDetail, uploadMaterial, fetchQuestions, logout as logoutApi, renameMaterial, deleteMaterial, fetchTags } from '../api';
+import { Book, Settings, Plus, Upload, Loader2, X, Menu, ClipboardList, MoreVertical, Pencil, Trash2, PanelLeftClose } from 'lucide-react';
+import { fetchMaterials, fetchMaterialDetail, uploadMaterial, fetchQuestions, renameMaterial, deleteMaterial, fetchTags } from '../api';
 import type { Material } from '../store/useStore';
 import { MaterialsScreen } from './MaterialsScreen';
 import { MaterialCard } from './MaterialCard';
-import { SearchBar } from './SearchBar';
 import { AppModal } from './AppModal';
 import { TagManagementModal } from './TagManagementModal';
 import { SeeAllTagsModal } from './SeeAllTagsModal';
-import { Link } from 'react-router-dom';
+import { TopNav } from './TopNav';
 
 
 const MaterialNavItem: React.FC<{
@@ -69,8 +68,15 @@ const MaterialNavItem: React.FC<{
           disabled={isProcessing}
         />
       ) : (
-        <button onClick={onSelect} className="flex-1 min-w-0 text-left truncate text-label-md">
-          {material.title}
+        <button onClick={onSelect} className="flex-1 min-w-0 text-left flex items-center gap-xs">
+          <span className={`text-[10px] font-bold px-1 py-0.5 rounded-sm shrink-0 w-9 text-center
+            ${isActive 
+              ? 'bg-on-secondary-container/10 text-on-secondary-container' 
+              : 'bg-surface-variant/50 text-on-surface-variant border border-outline-variant/30'
+            }`}>
+            {material.reading_progress ?? 0}%
+          </span>
+          <span className="truncate text-label-md">{material.title}</span>
         </button>
       )}
 
@@ -118,7 +124,8 @@ export const Layout: React.FC = () => {
     currentUser, logout, setCurrentUser, isAuthenticated,
     activeRequestCount,
     setFlagBlockId,
-    searchResults, searchQuery, setSearchResults
+    searchResults, searchQuery, setSearchResults,
+    scrollProgress
   } = useStore();
 
   useEffect(() => {
@@ -137,7 +144,6 @@ export const Layout: React.FC = () => {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isDocDrawerOpen, setIsDocDrawerOpen] = useState(false);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   // Upload modal state
   const [showUpload, setShowUpload] = useState(false);
@@ -276,37 +282,35 @@ export const Layout: React.FC = () => {
   const pendingCount = pendingQuestions.filter(q => q.status === 'pending' || q.status === 'failed').length;
 
   return (
-    <div className="select-none flex min-h-[100dvh] md:h-[100dvh] bg-background font-body-md text-on-surface md:overflow-hidden">
+    <>
+      <TopNav />
+      <div className="select-none flex min-h-[100dvh] md:h-[100dvh] pt-20 bg-background font-body-md text-on-surface md:overflow-hidden">
 
       {/* ── Left Sidebar Overlay (mobile) / Panel (desktop) ─────────────── */}
       {/* Backdrop */}
       {isLeftSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-[45] md:hidden"
+          className="fixed top-20 bottom-0 left-0 right-0 bg-black/40 z-[45] md:hidden"
           onClick={() => setIsLeftSidebarOpen(false)}
         />
       )}
 
       <aside className={`
-        fixed md:relative inset-y-0 left-0 z-50
+        fixed md:relative top-20 md:top-0 bottom-0 left-0 z-50
         bg-surface-container-low border-r border-outline-variant
         flex flex-col shrink-0 transition-transform duration-300
         w-72
         ${isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         ${!isLeftSidebarOpen ? 'md:w-0 md:overflow-hidden md:border-r-0' : 'md:w-72'}
       `}>
-        <div className="w-72 flex flex-col h-full">
-          <div className="p-md flex items-center justify-between gap-sm border-b border-outline-variant h-16 shrink-0">
-            <Link to="/dashboard" className="font-headline-md text-on-surface tracking-tight font-bold whitespace-nowrap hover:text-primary transition-colors">
-              Hippocrates AI
-            </Link>
-            <button onClick={() => setIsLeftSidebarOpen(false)} className="p-xs text-on-surface-variant hover:bg-surface-container-high rounded transition-colors" title="Close Library">
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-sm py-md space-y-xs">
-            <div className="px-sm mb-xs text-label-sm text-on-surface-variant uppercase">Library</div>
+        <div className="w-72 flex flex-col h-full pt-md">
+          <div className="flex-1 overflow-y-auto px-sm py-xs space-y-xs">
+            <div className="px-sm mb-sm flex items-center justify-between">
+              <span className="text-label-sm text-on-surface-variant uppercase">Library</span>
+              <button onClick={() => setIsLeftSidebarOpen(false)} className="p-xs text-on-surface-variant hover:bg-surface-container-high rounded transition-colors" title="Close Library">
+                <PanelLeftClose size={18} />
+              </button>
+            </div>
             <nav className="space-y-xs">
               {materials.length === 0 && (
                 <p className="px-sm text-label-sm text-on-surface-variant opacity-60">
@@ -419,12 +423,13 @@ export const Layout: React.FC = () => {
       {/* ── Main Content ─────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 bg-surface">
 
-        {/* Header */}
-        <header className="sticky top-0 h-14 md:h-16 flex items-center justify-between px-md md:px-xl bg-surface/80 backdrop-blur-xl z-40 border-b border-outline-variant shrink-0 gap-sm">
-          <div className="flex items-center gap-sm">
-            {/* Hamburger & Title — visible when sidebar is closed */}
-            {!isLeftSidebarOpen && (
-              <>
+        {/* Secondary Toolbar */}
+        <header className="fixed top-20 left-0 right-0 md:sticky md:top-0 h-14 flex items-center justify-between px-md md:px-xl bg-surface/80 backdrop-blur-xl z-40 border-b border-outline-variant shrink-0 gap-sm">
+          
+          <div className="flex items-center gap-sm h-full w-full justify-between">
+            {/* Left: Hamburger and Read/Review Toggle */}
+            <div className="flex items-center gap-sm md:gap-md">
+              {!isLeftSidebarOpen && (
                 <button
                   onClick={() => setIsLeftSidebarOpen(true)}
                   className="p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors"
@@ -432,97 +437,81 @@ export const Layout: React.FC = () => {
                 >
                   <Menu size={20} />
                 </button>
-                <Link to="/dashboard" className="font-headline-md text-on-surface tracking-tight font-bold ml-xs whitespace-nowrap hover:text-primary transition-colors">
-                  Hippocrates AI
-                </Link>
-              </>
-            )}
-
-            {/* Read / Review toggle */}
-            {activeMaterialId && !showMaterialsScreen && searchResults === null && (
-              <div className={`flex items-center bg-surface-container-lowest p-[3px] rounded-full border border-outline-variant ${isSearchExpanded ? 'hidden md:flex' : 'flex'}`}>
-                <button
-                  onClick={() => setMode('read')}
-                  className={`px-md py-[3px] rounded-full text-label-sm md:text-label-md transition-colors ${mode === 'read' ? 'bg-surface-container text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-                >Read</button>
-                <button
-                  onClick={() => setMode('review')}
-                  className={`px-md py-[3px] rounded-full text-label-sm md:text-label-md transition-colors ${mode === 'review' ? 'bg-surface-container text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-                >Review</button>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-sm md:gap-md w-full justify-end">
-            <div className={`${isSearchExpanded ? 'flex' : 'hidden md:flex'} flex-1 justify-end shrink`}>
-              <SearchBar onClose={() => setIsSearchExpanded(false)} isMobileExpanded={isSearchExpanded} />
-            </div>
-            {!isSearchExpanded && (
-              <button 
-                onClick={() => setIsSearchExpanded(true)} 
-                className="md:hidden p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
-                title="Search"
-              >
-                <Search size={20} />
-              </button>
-            )}
-            {/* Review Queue / View Source Material buttons */}
-            {activeMaterialId && !showMaterialsScreen && searchResults === null && (
-              mode === 'read' ? (
-                <button
-                  onClick={() => setIsRightSidebarOpen(v => !v)}
-                  className="relative p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
-                  title="Review Queue"
-                >
-                  <ClipboardList size={20} />
-                  {pendingCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-on-primary text-[9px] font-bold flex items-center justify-center">
-                      {pendingCount > 9 ? '9+' : pendingCount}
-                    </span>
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={() => setIsDocDrawerOpen(v => !v)}
-                  className="md:hidden relative p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
-                  title="View Source Material"
-                >
-                  <Book size={20} />
-                </button>
-              )
-            )}
-
-            {/* User avatar */}
-            <div className="relative shrink-0">
-              <div
-                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer font-bold text-on-primary select-none text-sm shrink-0"
-                onClick={() => document.getElementById('user-dropdown')?.classList.toggle('hidden')}
-              >
-                {currentUser?.first_name?.[0]?.toUpperCase() || <User size={16} />}
-              </div>
-              <div id="user-dropdown" className="hidden absolute right-0 mt-2 w-48 bg-surface border border-outline-variant rounded-xl shadow-lg py-sm z-50">
-                <div className="px-md py-sm border-b border-outline-variant mb-xs">
-                  <p className="text-label-md text-on-surface truncate font-bold">{currentUser?.first_name} {currentUser?.last_name}</p>
-                  <p className="text-label-sm text-on-surface-variant truncate">{currentUser?.email}</p>
+              )}
+              
+              {/* Read / Review toggle */}
+              {activeMaterialId && !showMaterialsScreen && searchResults === null && (
+                <div className={`flex items-center bg-surface-container-lowest p-[3px] rounded-full border border-outline-variant`}>
+                  <button
+                    onClick={() => setMode('read')}
+                    className={`px-3 py-1 rounded-full text-label-sm md:text-label-md transition-colors ${mode === 'read' ? 'bg-surface-container text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+                  >Read</button>
+                  <button
+                    onClick={() => setMode('review')}
+                    className={`px-3 py-1 rounded-full text-label-sm md:text-label-md transition-colors ${mode === 'review' ? 'bg-surface-container text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+                  >Review</button>
                 </div>
-                <button
-                  onClick={() => {
-                    const refresh = localStorage.getItem('refresh_token');
-                    if (refresh) logoutApi(refresh).catch(() => {});
-                    logout();
-                    window.location.href = '/login';
-                  }}
-                  className="w-full text-left px-md py-sm text-label-md text-error hover:bg-error/10 transition-colors"
-                >
-                  Sign Out
-                </button>
+              )}
+
+              {/* Mobile Circular Progress Bar */}
+              {activeMaterialId && mode === 'read' && !showMaterialsScreen && searchResults === null && (
+                <div className="md:hidden flex items-center justify-center shrink-0">
+                  <div className="relative flex items-center justify-center w-8 h-8">
+                    <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-surface-container-high" />
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray={2 * Math.PI * 14} strokeDashoffset={(2 * Math.PI * 14) - (scrollProgress / 100) * (2 * Math.PI * 14)} strokeLinecap="round" className="text-primary transition-all duration-150 ease-out" />
+                    </svg>
+                    <span className="text-[9px] font-bold text-on-surface-variant font-mono">{Math.round(scrollProgress)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Horizontal Progress Bar (Centrally located) */}
+            {activeMaterialId && mode === 'read' && !showMaterialsScreen && searchResults === null && (
+              <div className="hidden md:flex flex-1 max-w-xl mx-auto items-center gap-sm px-4 h-full">
+                <div className="flex-1 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-primary h-1.5 rounded-full transition-all duration-150 ease-out" style={{ width: `${scrollProgress}%` }} />
+                </div>
+                <div className="text-[11px] text-on-surface-variant font-bold font-mono w-8 text-right">
+                  {Math.round(scrollProgress)}%
+                </div>
               </div>
+            )}
+
+            {/* Right: Review Queue */}
+            <div className="flex items-center gap-sm ml-auto h-full">
+              {/* Review Queue / View Source Material buttons */}
+              {activeMaterialId && !showMaterialsScreen && searchResults === null && (
+                mode === 'read' ? (
+                  <button
+                    onClick={() => setIsRightSidebarOpen(v => !v)}
+                    className="relative p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
+                    title="Review Queue"
+                  >
+                    <ClipboardList size={20} />
+                    {pendingCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-on-primary text-[9px] font-bold flex items-center justify-center">
+                        {pendingCount > 9 ? '9+' : pendingCount}
+                      </span>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsDocDrawerOpen(v => !v)}
+                    className="md:hidden relative p-xs hover:bg-surface-container-high rounded text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
+                    title="View Source Material"
+                  >
+                    <Book size={20} />
+                  </button>
+                )
+              )}
             </div>
           </div>
         </header>
 
         {/* Main */}
-        <main className="flex-1 flex min-h-0 relative md:overflow-hidden">
+        <main className="flex-1 flex min-h-0 relative md:overflow-hidden mt-14 md:mt-0">
           {searchResults !== null ? (
             <div className="flex-1 overflow-y-auto p-xl">
               <h2 className="font-headline-lg text-on-surface mb-md">
@@ -554,14 +543,14 @@ export const Layout: React.FC = () => {
               {/* Right Panel backdrop (mobile) */}
               {isRightSidebarOpen && (
                 <div
-                  className="fixed inset-0 bg-black/40 z-[45] md:hidden"
+                  className="fixed top-20 bottom-0 left-0 right-0 bg-black/40 z-[45] md:hidden"
                   onClick={() => setIsRightSidebarOpen(false)}
                 />
               )}
 
               {/* Right Panel: AI Review Queue */}
               <aside className={`
-                fixed md:relative inset-y-0 right-0 z-50
+                fixed md:relative top-20 md:top-0 bottom-0 right-0 z-50
                 bg-surface-container flex flex-col shrink-0 min-h-0 border-l border-outline-variant
                 transition-all duration-300
                 w-[85vw]
@@ -611,12 +600,12 @@ export const Layout: React.FC = () => {
               {/* Doc sidebar drawer on mobile in review mode */}
               {isDocDrawerOpen && (
                 <div
-                  className="fixed inset-0 bg-black/40 z-[45] md:hidden"
+                  className="fixed top-20 bottom-0 left-0 right-0 bg-black/40 z-[45] md:hidden"
                   onClick={() => setIsDocDrawerOpen(false)}
                 />
               )}
               <aside className={`
-                fixed md:relative inset-y-0 right-0 z-50
+                fixed md:relative top-20 md:top-0 bottom-0 right-0 z-50
                 bg-surface-container-lowest flex flex-col shrink-0 border-l border-outline-variant
                 transition-transform duration-300
                 w-[85vw] md:w-96
@@ -741,5 +730,6 @@ export const Layout: React.FC = () => {
         <TagManagementModal tag={managingTag} onClose={() => setManagingTag(null)} />
       )}
     </div>
+    </>
   );
 };

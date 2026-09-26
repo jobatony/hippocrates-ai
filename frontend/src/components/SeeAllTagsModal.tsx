@@ -12,8 +12,8 @@ export const SeeAllTagsModal: React.FC<Props> = ({ onClose, onManageTag }) => {
   const { tags, activeTagId, setActiveTagId } = useStore();
 
   return (
-    <AppModal isOpen={true} onClose={onClose} title="All Tags" maxWidth="md" heightClass="h-[240px] sm:h-[300px]">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-sm p-sm">
+    <AppModal isOpen={true} onClose={onClose} title="All Tags" maxWidth="md" centerOnMobile heightClass="h-[350px]">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-sm p-sm">
         {tags.map(tag => (
           <div key={tag.id} className="flex items-center group relative min-w-0">
             <div className="flex-1 min-w-0">

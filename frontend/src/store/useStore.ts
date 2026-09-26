@@ -129,6 +129,9 @@ interface AppState {
   incrementActiveRequests: () => void;
   decrementActiveRequests: () => void;
 
+  scrollProgress: number;
+  setScrollProgress: (progress: number) => void;
+
   // New features
   tags: import('../api').ApiTag[];
   activeTagId: string | null;
@@ -254,6 +257,9 @@ export const useStore = create<AppState>()(
   activeRequestCount: 0,
   incrementActiveRequests: () => set(state => ({ activeRequestCount: state.activeRequestCount + 1 })),
   decrementActiveRequests: () => set(state => ({ activeRequestCount: Math.max(0, state.activeRequestCount - 1) })),
+
+  scrollProgress: 0,
+  setScrollProgress: (scrollProgress) => set({ scrollProgress }),
 
   // New features
   tags: [],
