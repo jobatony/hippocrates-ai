@@ -42,10 +42,10 @@ export const BlockNode: React.FC<BlockNodeProps> = React.memo(({ block, displayF
   const isFlag = block.id === displayFlagId;
 
   return (
-    <div id={`block-${id}`} data-block-id={id} className="select-text relative group p-xs -mx-xs rounded hover:bg-surface-container-lowest transition-colors">
+    <div id={`block-${id}`} data-block-id={id} className="select-text relative group sm:p-xs sm:-mx-xs rounded hover:bg-surface-container-lowest transition-colors">
       {isFlag && (
         <div
-          className="absolute -left-6 top-1/2 -translate-y-1/2 text-amber-500"
+          className="absolute -left-3 sm:-left-6 top-1/2 -translate-y-1/2 text-amber-500"
           title="Continue from here"
         >
           <Flag size={14} fill="currentColor" />
