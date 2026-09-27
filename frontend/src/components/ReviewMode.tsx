@@ -11,7 +11,7 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { AppModal } from './AppModal';
 
 export const ReviewMode: React.FC = () => {
-  const { activeMaterialId, setQuestions, setLoadingQuestions, isLoadingQuestions, setActiveBlockId, documentBlocks, setMode } = useStore();
+  const { activeMaterialId, setQuestions, setLoadingQuestions, isLoadingQuestions, setActiveBlockId, documentBlocks, setMode, removeQuestion } = useStore();
 
   const [approved, setApproved] = useState<Question[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -82,7 +82,7 @@ export const ReviewMode: React.FC = () => {
       const newApproved = approved.filter(q => q.id !== questionToDelete.id);
       setApproved(newApproved);
       
-      setQuestions(useStore.getState().questions.filter((q: Question) => q.id !== questionToDelete.id));
+      removeQuestion(questionToDelete.id);
 
       if (currentIndex >= newApproved.length && currentIndex > 0) {
         setCurrentIndex(i => i - 1);
