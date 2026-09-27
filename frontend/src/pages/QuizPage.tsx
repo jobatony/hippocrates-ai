@@ -373,9 +373,9 @@ export const QuizPage: React.FC = () => {
           maxWidth="4xl"
           centerOnMobile
         >
-          <div className="h-[65vh] flex flex-col min-h-0 -mx-xl -my-md px-md">
+          <div className="flex flex-col min-h-0 -ml-xl -mr-md -my-md">
             {isLoadingSource ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-xl text-on-surface-variant">
+              <div className="flex-1 flex flex-col items-center justify-center p-xl text-on-surface-variant h-[50vh]">
                 <Loader2 size={32} className="animate-spin text-primary mb-2" />
                 <p className="font-label-md">Loading source material...</p>
               </div>

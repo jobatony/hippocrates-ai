@@ -177,7 +177,7 @@ export const DocumentRenderer: React.FC<Props> = ({ readOnly = false, scrollToBl
       {/* Scrolling Content */}
       <div
         ref={containerRef}
-        className="flex-1 flex flex-col min-w-0 px-md sm:px-xl pt-6 pb-xl md:pt-6 md:overflow-y-auto relative"
+        className="flex-1 flex flex-col min-w-0 px-md sm:px-xl pt-6 pb-xl md:pt-6 md:overflow-y-auto custom-scrollbar relative"
         onContextMenu={handleContextMenu}
       >
         <div className="max-w-3xl mx-auto w-full relative">
