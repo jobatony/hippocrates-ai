@@ -39,7 +39,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onClose, isMobileExpanded 
   return (
     <div className={`relative flex items-center bg-surface-container-highest rounded-full
       px-md py-xs border border-outline-variant focus-within:border-primary transition-all
-      w-full ${isMobileExpanded ? 'max-w-full md:max-w-[260px] lg:max-w-xs' : 'max-w-[180px] sm:max-w-[220px] md:max-w-[260px] lg:max-w-xs'} ml-auto sm:ml-4 shrink`}>
+      w-full ${isMobileExpanded ? 'max-w-full md:max-w-[260px] lg:max-w-xs' : 'max-w-[130px] sm:max-w-[220px] md:max-w-[260px] lg:max-w-xs'} ml-auto sm:ml-4 shrink`}>
       <Search size={16} className="text-on-surface-variant shrink-0" />
       <input
         type="text"

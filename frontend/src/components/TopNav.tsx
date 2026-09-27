@@ -44,12 +44,12 @@ export const TopNav: React.FC = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.25)]">
-      <div className="h-20 w-full px-spacing-xl flex items-center justify-between gap-spacing-lg max-w-7xl mx-auto">
+      <div className="h-20 w-full px-4 md:px-spacing-xl flex items-center justify-between gap-2 md:gap-spacing-lg max-w-7xl mx-auto">
         
         {/* Left: Logo */}
-        <div className="flex items-center gap-spacing-md flex-shrink-0">
-          <Link to="/dashboard" className="flex flex-col hover:opacity-80 transition-opacity">
-            <span className="font-title-md text-title-md text-on-surface tracking-tight leading-none font-bold text-xl">Hippocrates AI</span>
+        <div className="flex items-center gap-2 md:gap-spacing-md shrink-0 min-w-0">
+          <Link to="/dashboard" className="flex flex-col hover:opacity-80 transition-opacity min-w-0">
+            <span className="font-title-md text-title-md text-on-surface tracking-tight leading-none font-bold text-base sm:text-lg md:text-xl truncate">Hippocrates AI</span>
           </Link>
         </div>
 
@@ -75,7 +75,7 @@ export const TopNav: React.FC = () => {
         </nav>
 
         {/* Right: Search + Avatar */}
-        <div className="flex items-center gap-spacing-sm sm:gap-spacing-md shrink-0">
+        <div className="flex items-center gap-2 sm:gap-spacing-md shrink min-w-0">
           
           {/* Search Bar (Mobile & Desktop) */}
           {location.pathname === '/library' && (

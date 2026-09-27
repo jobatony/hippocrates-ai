@@ -557,22 +557,22 @@ export const Layout: React.FC = () => {
                 ${isRightSidebarOpen ? 'translate-x-0 md:w-96' : 'translate-x-full md:translate-x-0 md:w-0 md:overflow-hidden md:border-l-0'}
               `}>
                 <div className="w-[85vw] md:w-96 flex flex-col h-full min-h-0">
-                  <header className="h-14 md:h-16 flex items-center justify-between px-md border-b border-outline-variant bg-surface-container-high shrink-0">
-                    <div className="flex items-center gap-sm">
+                  <header className="h-14 md:h-16 flex items-center justify-between px-2 sm:px-md border-b border-outline-variant bg-surface-container-high shrink-0 gap-1 sm:gap-sm">
+                    <div className="flex items-center gap-1 sm:gap-sm shrink-0">
                       <button onClick={() => setIsRightSidebarOpen(false)} className="p-xs text-on-surface-variant hover:bg-surface-container-highest rounded transition-colors" title="Close">
                         <X size={20} />
                       </button>
-                      <div className="font-headline-md text-on-surface text-[15px] md:text-[16px]">Review Queue</div>
+                      <div className="font-headline-md text-on-surface text-[14px] sm:text-[15px] md:text-[16px] truncate">Review Queue</div>
                     </div>
-                    <div className="bg-surface-container-lowest px-sm py-xs rounded border border-outline-variant flex items-center gap-xs">
-                      <span className="text-label-sm text-on-surface-variant">Pending:</span>
-                      <span className="text-label-sm font-bold text-primary">{queueCount} / {MAX_QUEUE}</span>
+                    <div className="bg-surface-container-lowest px-1 sm:px-sm py-xs rounded border border-outline-variant flex items-center gap-1 sm:gap-xs shrink min-w-0">
+                      <span className="hidden sm:inline text-label-sm text-on-surface-variant">Pending:</span>
+                      <span className="text-label-sm font-bold text-primary shrink-0">{queueCount}/{MAX_QUEUE}</span>
                       {activeRequestCount > 0 && (
                         <>
-                          <div className="w-px h-3 bg-outline-variant mx-[2px]"></div>
-                          <div className="flex items-center gap-[4px] text-primary bg-primary/10 px-2 py-[2px] rounded-full">
-                            <Loader2 size={12} className="animate-spin" />
-                            <span className="text-[11px] font-bold tracking-wide uppercase">{activeRequestCount} generating</span>
+                          <div className="w-px h-3 bg-outline-variant mx-[1px] sm:mx-[2px]"></div>
+                          <div className="flex items-center gap-[2px] sm:gap-[4px] text-primary bg-primary/10 px-1 sm:px-2 py-[2px] rounded-full shrink min-w-0">
+                            <Loader2 size={12} className="animate-spin shrink-0" />
+                            <span className="text-[9px] sm:text-[11px] font-bold tracking-wide uppercase truncate">{activeRequestCount} gen</span>
                           </div>
                         </>
                       )}
