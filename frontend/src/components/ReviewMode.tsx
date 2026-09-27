@@ -6,8 +6,8 @@ import { TrueFalseReview } from './TrueFalseReview';
 import { FillInReview } from './FillInReview';
 import { AppliesReview } from './AppliesReview';
 import { EditQuestionModal } from './EditQuestionModal';
-import { fetchQuestions } from '../api';
-import { Loader2 } from 'lucide-react';
+import { fetchQuestions, deleteQuestion } from '../api';
+import { Loader2, Trash2 } from 'lucide-react';
 
 export const ReviewMode: React.FC = () => {
   const { activeMaterialId, setQuestions, setLoadingQuestions, isLoadingQuestions, setActiveBlockId, documentBlocks, setMode } = useStore();
@@ -70,6 +70,25 @@ export const ReviewMode: React.FC = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!currentQuestion) return;
+    if (confirm("Are you sure you want to delete this question?")) {
+      try {
+        await deleteQuestion(currentQuestion.id);
+        const newApproved = approved.filter(q => q.id !== currentQuestion.id);
+        setApproved(newApproved);
+        
+        setQuestions(useStore.getState().questions.filter((q: Question) => q.id !== currentQuestion.id));
+
+        if (currentIndex >= newApproved.length && currentIndex > 0) {
+          setCurrentIndex(i => i - 1);
+        }
+      } catch (err) {
+        alert("Failed to delete question.");
+      }
+    }
+  };
+
   // Spinner while questions are still loading from backend
   if (isLoadingQuestions || !hasInitialized) {
     return (
@@ -105,13 +124,22 @@ export const ReviewMode: React.FC = () => {
           <div className="text-label-sm text-on-surface-variant font-bold tracking-widest uppercase flex items-center gap-xs">
             <span>Question {currentIndex + 1} of {approved.length}</span>
           </div>
-          <button
-            onClick={() => setEditingQuestion(true)}
-            className="text-primary hover:bg-primary/10 px-sm py-xs rounded flex items-center gap-xs transition-colors text-label-sm font-bold"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-            Edit Question
-          </button>
+          <div className="flex gap-sm">
+            <button
+              onClick={handleDelete}
+              className="text-error hover:bg-error/10 px-sm py-xs rounded flex items-center gap-xs transition-colors text-label-sm font-bold"
+            >
+              <Trash2 size={16} />
+              Delete
+            </button>
+            <button
+              onClick={() => setEditingQuestion(true)}
+              className="text-primary hover:bg-primary/10 px-sm py-xs rounded flex items-center gap-xs transition-colors text-label-sm font-bold"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+              Edit Question
+            </button>
+          </div>
         </div>
       </div>
 

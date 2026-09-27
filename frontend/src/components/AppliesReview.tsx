@@ -85,19 +85,22 @@ export const AppliesReview: React.FC<Props> = ({ question, onNext, onPrev, isFir
         >
           Previous
         </button>
-        {!checked ? (
-          <button 
-            onClick={handleCheck}
-            className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
-          >
-            Check Answer
-          </button>
-        ) : (
+        <div className="flex gap-sm">
+          {!checked && (
+            <button 
+              onClick={handleCheck}
+              className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
+            >
+              Check Answer
+            </button>
+          )}
           <button 
             onClick={onNext}
-            className="px-xl py-sm bg-primary text-on-primary rounded-full font-label-lg"
-          >{isLastQuestion ? 'End Review' : 'Next'}</button>
-        )}
+            className={`px-xl py-sm rounded-full font-label-lg transition-colors ${checked ? 'bg-primary text-on-primary' : 'bg-surface-container-high hover:bg-surface-container-highest text-on-surface'}`}
+          >
+            {isLastQuestion ? 'End Review' : 'Next'}
+          </button>
+        </div>
       </div>
     </div>
   );
