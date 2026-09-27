@@ -412,9 +412,8 @@ export const Layout: React.FC = () => {
           </div>
 
           <div className="p-md border-t border-outline-variant shrink-0">
-            <a href="#" className="flex items-center gap-sm text-on-surface-variant hover:text-on-surface transition-colors">
+            <a href="#" className="flex items-center gap-sm text-on-surface-variant hover:text-on-surface transition-colors" title="Settings">
               <Settings size={18} />
-              <span className="text-label-md">Fine-tune AI prompt</span>
             </a>
           </div>
         </div>

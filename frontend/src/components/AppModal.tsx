@@ -10,6 +10,7 @@ interface AppModalProps {
   hideCloseButton?: boolean;
   heightClass?: string;
   centerOnMobile?: boolean;
+  noPadding?: boolean;
 }
 
 export const AppModal: React.FC<AppModalProps> = ({
@@ -21,6 +22,7 @@ export const AppModal: React.FC<AppModalProps> = ({
   hideCloseButton = false,
   heightClass = '',
   centerOnMobile = false,
+  noPadding = false,
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,9 +50,9 @@ export const AppModal: React.FC<AppModalProps> = ({
   return (
     <div className={`fixed inset-0 bg-black/40 backdrop-filter backdrop-blur-md z-[100] flex justify-center p-md sm:p-md ${centerOnMobile ? 'items-center' : 'items-end sm:items-center'}`}>
       <div className="absolute inset-0 z-0" onClick={onClose} />
-      <div className={`relative z-10 bg-surface-container-highest w-full shadow-2xl flex flex-col p-xl ${maxWidthClasses[maxWidth]} ${heightClass} ${centerOnMobile ? 'rounded-2xl max-h-[90dvh]' : 'rounded-t-2xl sm:rounded-2xl max-h-[90dvh] sm:max-h-[90dvh]'}`}>
+      <div className={`relative z-10 bg-surface-container-highest w-full shadow-2xl flex flex-col ${noPadding ? '' : 'p-xl'} ${maxWidthClasses[maxWidth]} ${heightClass} ${centerOnMobile ? 'rounded-2xl max-h-[90dvh]' : 'rounded-t-2xl sm:rounded-2xl max-h-[90dvh] sm:max-h-[90dvh]'}`}>
         {(title || !hideCloseButton) && (
-          <div className="flex justify-between items-center mb-lg shrink-0">
+          <div className={`flex justify-between items-center shrink-0 ${noPadding ? 'p-lg border-b border-outline-variant' : 'mb-lg'}`}>
             {title ? <h2 className="font-headline-md text-on-surface">{title}</h2> : <div />}
             {!hideCloseButton && (
               <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface p-1 rounded hover:bg-surface-container-high transition-colors">

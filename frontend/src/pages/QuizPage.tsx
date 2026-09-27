@@ -241,7 +241,8 @@ export const QuizPage: React.FC = () => {
       setActiveBlockId(currentCard.block_id);
     }
 
-    if (activeMaterialId !== currentCard.material_id) {
+    const documentBlocks = useStore.getState().documentBlocks;
+    if (activeMaterialId !== currentCard.material_id || documentBlocks.length === 0) {
       setIsLoadingSource(true);
       setLoadingDocument(true);
       try {
@@ -372,15 +373,18 @@ export const QuizPage: React.FC = () => {
           title={currentCard?.material_title || "Source Document"}
           maxWidth="4xl"
           centerOnMobile
+          noPadding
         >
-          <div className="flex flex-col min-h-0 -ml-xl -mr-md -my-md">
+          <div className="flex flex-col min-h-0 px-3 pb-3 sm:px-4 sm:pb-4">
             {isLoadingSource ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-xl text-on-surface-variant h-[50vh]">
+              <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant h-[50vh]">
                 <Loader2 size={32} className="animate-spin text-primary mb-2" />
                 <p className="font-label-md">Loading source material...</p>
               </div>
             ) : (
-              <DocumentRenderer readOnly scrollToBlockId={currentCard?.block_id} />
+              <div className="flex-1 flex flex-col min-h-0 rounded-b-2xl overflow-hidden">
+                <DocumentRenderer readOnly scrollToBlockId={currentCard?.block_id} />
+              </div>
             )}
           </div>
         </AppModal>
