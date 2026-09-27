@@ -87,7 +87,7 @@ class DailyStudyLog(models.Model):
     date         = models.DateField(db_index=True)
     reviewed     = models.PositiveIntegerField(default=0)   # total answers submitted today
     created      = models.PositiveIntegerField(default=0)   # questions approved today
-    review_streak_met    = models.BooleanField(default=False)       # reviewed >= 120
+    review_streak_met    = models.BooleanField(default=False)       # reviewed >= 50
     creation_streak_met  = models.BooleanField(default=False)       # created >= 50
 
     class Meta:

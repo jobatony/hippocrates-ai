@@ -209,7 +209,7 @@ export const LandingPage: React.FC = () => {
                       animate={{ y: [0, -8, 0], scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }}
                       className="h-16 flex-1 bg-primary rounded-xl border-b-4 border-primary-container text-on-primary flex items-center justify-center font-bold text-xl"
                     >
-                      120
+                      50
                     </motion.div>
                     <motion.div 
                       animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2, delay: 1.5 }}

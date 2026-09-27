@@ -24,7 +24,7 @@ class DashboardStatsTestCase(TestCase):
         d_minus_4 = today - timedelta(days=4)
         DailyStudyLog.objects.create(
             user=self.user, date=d_minus_4,
-            reviewed=120, created=50,
+            reviewed=50, created=50,
             review_streak_met=True, creation_streak_met=True
         )
 
@@ -32,7 +32,7 @@ class DashboardStatsTestCase(TestCase):
         d_minus_3 = today - timedelta(days=3)
         DailyStudyLog.objects.create(
             user=self.user, date=d_minus_3,
-            reviewed=120, created=50,
+            reviewed=50, created=50,
             review_streak_met=True, creation_streak_met=True
         )
         
@@ -48,7 +48,7 @@ class DashboardStatsTestCase(TestCase):
         d_minus_1 = today - timedelta(days=1)
         DailyStudyLog.objects.create(
             user=self.user, date=d_minus_1,
-            reviewed=120, created=50,
+            reviewed=50, created=50,
             review_streak_met=True, creation_streak_met=True
         )
         

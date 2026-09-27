@@ -83,7 +83,7 @@ class StreakLogicTestCase(TestCase):
         DailyStudyLog.objects.create(
             user=self.user, date=yesterday,
             created=50, creation_streak_met=True,
-            reviewed=120, review_streak_met=True
+            reviewed=50, review_streak_met=True
         )
 
         # Today met only creation streak

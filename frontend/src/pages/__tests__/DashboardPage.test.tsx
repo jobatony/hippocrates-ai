@@ -15,7 +15,7 @@ vi.mock('../../api', () => ({
 
 const mockStats: api.DashboardStats = {
   reviewed_today: 100,
-  review_streak_minimum: 120,
+  review_streak_minimum: 50,
   created_today: 50,
   creation_streak_minimum: 50,
   longest_review_streak: 42,
@@ -24,7 +24,7 @@ const mockStats: api.DashboardStats = {
   monthly_activity: [
     { date: '2025-01-01', reviewed: 10, created: 2, streak_met: false, review_streak_met: false, creation_streak_met: false },
     { date: '2025-01-02', reviewed: 130, created: 50, streak_met: true, review_streak_met: true, creation_streak_met: true },
-    { date: '2025-01-03', reviewed: 120, created: 60, streak_met: true, review_streak_met: true, creation_streak_met: true }
+    { date: '2025-01-03', reviewed: 50, created: 60, streak_met: true, review_streak_met: true, creation_streak_met: true }
   ]
 };
 
@@ -57,8 +57,8 @@ describe('DashboardPage', () => {
     });
 
     expect(screen.getByText('100')).toBeInTheDocument();
-    expect(screen.getByText('/ 120')).toBeInTheDocument();
-    expect(screen.getByText('50')).toBeInTheDocument();
+    expect(screen.getAllByText('/ 50').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('50').length).toBeGreaterThan(0);
     
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('55')).toBeInTheDocument();

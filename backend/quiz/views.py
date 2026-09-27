@@ -140,7 +140,7 @@ class QuestionDetailView(APIView):
                 log.created += 1
                 
                 CREATION_STREAK_MINIMUM = 50
-                REVIEW_STREAK_MINIMUM = 120
+                REVIEW_STREAK_MINIMUM = 50
                 log.creation_streak_met = log.created >= CREATION_STREAK_MINIMUM
                 log.review_streak_met = log.reviewed >= REVIEW_STREAK_MINIMUM or due_count == 0
                 log.save(update_fields=['created', 'creation_streak_met', 'review_streak_met'])
@@ -184,7 +184,7 @@ class DashboardStatsView(APIView):
         reviewed_today = today_log.reviewed if today_log else 0
         created_today  = today_log.created  if today_log else 0
         
-        REVIEW_STREAK_MINIMUM = 120
+        REVIEW_STREAK_MINIMUM = 50
         CREATION_STREAK_MINIMUM = 50
 
         # Current month's activity
@@ -291,7 +291,7 @@ def _card_from_schedule(schedule: QuestionSchedule) -> dict:
     }
 
 
-REVIEW_STREAK_MINIMUM = 120
+REVIEW_STREAK_MINIMUM = 50
 SLOT_SIZE = 100
 
 class QuizSessionView(APIView):
