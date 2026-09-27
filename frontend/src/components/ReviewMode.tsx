@@ -72,9 +72,11 @@ export const ReviewMode: React.FC = () => {
   };
 
   const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const confirmDelete = async () => {
-    if (!questionToDelete) return;
+    if (!questionToDelete || isDeleting) return;
+    setIsDeleting(true);
     try {
       await deleteQuestion(questionToDelete.id);
       const newApproved = approved.filter(q => q.id !== questionToDelete.id);
@@ -88,6 +90,8 @@ export const ReviewMode: React.FC = () => {
       setQuestionToDelete(null);
     } catch (err) {
       alert("Failed to delete question.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -180,15 +184,17 @@ export const ReviewMode: React.FC = () => {
           <div className="flex justify-end gap-sm mt-xl">
             <button
               onClick={() => setQuestionToDelete(null)}
-              className="px-lg py-sm rounded-full text-label-md font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors"
+              disabled={isDeleting}
+              className="px-lg py-sm rounded-full text-label-md font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={confirmDelete}
-              className="px-lg py-sm rounded-full text-label-md font-bold bg-error text-on-error hover:bg-error/90 transition-colors shadow-sm"
+              disabled={isDeleting}
+              className="px-lg py-sm rounded-full text-label-md font-bold bg-error text-on-error hover:bg-error/90 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center min-w-[100px]"
             >
-              Delete
+              {isDeleting ? <Loader2 size={18} className="animate-spin" /> : "Delete"}
             </button>
           </div>
         </AppModal>
