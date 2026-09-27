@@ -408,6 +408,11 @@ class QuizSessionAnswerView(APIView):
         except QuestionSchedule.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+        # Lazy evaluation: if it was reviewed on a previous day, its streak should have reset to 0
+        if schedule.last_reviewed and schedule.last_reviewed.date() < today:
+            schedule.streak = 0
+            schedule.mastered_at = None
+
         if correct:
             schedule.streak += 1
         else:

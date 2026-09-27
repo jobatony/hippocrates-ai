@@ -95,6 +95,24 @@ class QuizSessionAnswerTestCase(APITestCase):
         log = DailyStudyLog.objects.get(user=self.user, date=timezone.now().date())
         self.assertEqual(log.reviewed, 1)
 
+    def test_streak_resets_on_new_day(self):
+        # Set schedule up as if it was active a few days ago, with streak = 2
+        # But today is a new day and it wasn't mastered.
+        past_date = timezone.now() - timedelta(days=2)
+        self.schedule.streak = 2
+        self.schedule.last_reviewed = past_date
+        self.schedule.save()
+        
+        # When we answer the question correctly today
+        response = self.client.post(self.url, {'correct': True}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        
+        self.schedule.refresh_from_db()
+        # Since it was answered a few days ago, the streak should reset to 0 before the correct answer is applied.
+        # So it goes 0 -> 1.
+        self.assertEqual(self.schedule.streak, 1)
+        self.assertEqual(self.schedule.last_reviewed.date(), timezone.now().date())
+
 class QuizSessionTestCase(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='tester2', password='pw')
