@@ -319,6 +319,24 @@ class QuizSessionView(APIView):
         
         all_eligible = list(eligible_qs)
         
+        # Reset streak for cards from previous days before sorting
+        for s in all_eligible:
+            needs_reset = False
+            
+            # Reset if mastered on a previous day and due again today
+            if s.mastered_at and s.mastered_at.date() < today:
+                needs_reset = True
+                
+            # Reset if partially studied on a previous day
+            if s.last_reviewed and s.last_reviewed.date() < today and s.streak > 0:
+                needs_reset = True
+                
+            if needs_reset:
+                s.streak = 0
+                s.mastered_at = None
+                s.available_at = None
+                s.save(update_fields=['streak', 'mastered_at', 'available_at'])
+
         # Sort in Python to heavily prioritize cards that have been started today (streak > 0)
         # so they don't get lost in the backlog if the user refreshes the page.
         from datetime import datetime
@@ -326,14 +344,6 @@ class QuizSessionView(APIView):
             0 if s.streak > 0 else 1,
             s.available_at or timezone.now()
         ))
-        
-        # Reset streak for cards mastered on previous days returning to the queue
-        for s in all_eligible:
-            if s.mastered_at and s.mastered_at.date() < today:
-                s.streak = 0
-                s.mastered_at = None
-                s.available_at = None
-                s.save(update_fields=['streak', 'mastered_at', 'available_at'])
 
         # 2. Quota-based Selection
         new_cards = [s for s in all_eligible if s.review_count == 0]

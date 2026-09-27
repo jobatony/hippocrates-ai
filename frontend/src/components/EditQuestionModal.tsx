@@ -344,7 +344,7 @@ export const EditQuestionModal: React.FC<Props> = ({ question, onClose }) => {
 
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-md">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-md">
       <div className="bg-surface-container rounded-2xl p-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center mb-lg shrink-0">
           <h2 className="font-headline-md text-on-surface flex items-center gap-sm">
