@@ -129,15 +129,8 @@ const MCQQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorrect:
 
 const TrueFalseQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorrect: boolean) => void }> = ({ payload, answered, onReveal }) => {
   const [statements] = useState(() => {
-    const len = payload.statements.length;
-    let numTrue = Math.floor(Math.random() * (len - 1)) + 1;
-    if (len <= 1) numTrue = Math.random() > 0.5 ? 1 : 0;
-    
-    const bools = Array.from({ length: len }, (_, i) => i < numTrue);
-    bools.sort(() => Math.random() - 0.5);
-    
-    return payload.statements.map((stmt: any, i: number) => {
-      const isTrue = bools[i];
+    return payload.statements.map((stmt: any) => {
+      const isTrue = Math.random() > 0.5;
       return {
         text: isTrue ? stmt.true_statement : stmt.false_alternative,
         isTrue
