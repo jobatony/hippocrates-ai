@@ -128,15 +128,18 @@ const MCQQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorrect:
 // ─── Component: True/False ─────────────────────────────────────────────────
 
 const TrueFalseQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorrect: boolean) => void }> = ({ payload, answered, onReveal }) => {
-  const [statements] = useState(() => 
-    payload.statements.map((stmt: any) => {
-      const isTrue = Math.random() > 0.5;
+  const [statements] = useState(() => {
+    const len = payload.statements.length;
+    const bools = Array.from({ length: len }, (_, i) => i < Math.ceil(len / 2));
+    bools.sort(() => Math.random() - 0.5);
+    return payload.statements.map((stmt: any, i: number) => {
+      const isTrue = bools[i];
       return {
         text: isTrue ? stmt.true_statement : stmt.false_alternative,
         isTrue
       };
-    })
-  );
+    });
+  });
 
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
 

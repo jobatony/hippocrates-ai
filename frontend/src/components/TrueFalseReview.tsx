@@ -32,9 +32,13 @@ export const TrueFalseReview: React.FC<Props> = ({ question, onNext, onPrev, isF
     const shuffled = [...payload.statements].sort(() => 0.5 - Math.random());
     const picked = shuffled.slice(0, 4);
     
-    // For each, randomly decide whether to show the true or false statement
-    const display = picked.map(stmt => {
-      const showTrue = Math.random() > 0.5;
+    // Ensure a balanced mix of true and false statements
+    const len = picked.length;
+    const bools = Array.from({ length: len }, (_, i) => i < Math.ceil(len / 2));
+    bools.sort(() => Math.random() - 0.5);
+
+    const display = picked.map((stmt, i) => {
+      const showTrue = bools[i];
       return {
         original: stmt,
         text: showTrue ? stmt.true_statement : stmt.false_alternative,
