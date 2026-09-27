@@ -304,7 +304,7 @@ export const Layout: React.FC = () => {
         ${!isLeftSidebarOpen ? 'md:w-0 md:overflow-hidden md:border-r-0' : 'md:w-72'}
       `}>
         <div className="w-72 flex flex-col h-full pt-md">
-          <div className="flex-1 overflow-y-auto px-sm py-xs space-y-xs">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-sm py-xs space-y-xs">
             <div className="px-sm mb-sm flex items-center justify-between">
               <span className="text-label-sm text-on-surface-variant uppercase">Library</span>
               <button onClick={() => setIsLeftSidebarOpen(false)} className="p-xs text-on-surface-variant hover:bg-surface-container-high rounded transition-colors" title="Close Library">
@@ -578,7 +578,7 @@ export const Layout: React.FC = () => {
                       )}
                     </div>
                   </header>
-                  <div className="flex-1 overflow-y-auto p-md flex flex-col gap-md">
+                  <div className="flex-1 overflow-y-auto overscroll-contain p-md flex flex-col gap-md">
                     {pendingQuestions.filter(q => q.status === 'pending' || q.status === 'failed').map((question) => (
                       <QuestionCard key={question.id} question={question} />
                     ))}
@@ -618,7 +618,7 @@ export const Layout: React.FC = () => {
                       <X size={20} />
                     </button>
                   </header>
-                  <div className="flex-1 overflow-y-auto relative">
+                  <div className="flex-1 overflow-y-auto overscroll-contain relative">
                     <DocumentRenderer readOnly scrollToBlockId={activeBlockId} isDrawerOpen={isDocDrawerOpen} />
                   </div>
                 </div>

@@ -112,7 +112,7 @@ export const ReviewMode: React.FC = () => {
   const progressPercent = Math.round(((currentIndex + 1) / approved.length) * 100);
 
   return (
-    <div className="select-text flex-1 flex flex-col items-center justify-start py-xl md:py-[10vh] px-md md:px-xl gap-lg md:overflow-y-auto bg-surface">
+    <div className="select-text flex-1 flex flex-col items-center justify-start py-xl md:py-[10vh] px-md md:px-xl gap-lg md:overflow-y-auto overscroll-contain bg-surface">
       <div className="w-full max-w-3xl">
         <div className="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden mb-1">
           <div 
