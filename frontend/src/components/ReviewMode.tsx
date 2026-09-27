@@ -8,6 +8,7 @@ import { AppliesReview } from './AppliesReview';
 import { EditQuestionModal } from './EditQuestionModal';
 import { fetchQuestions, deleteQuestion } from '../api';
 import { Loader2, Trash2 } from 'lucide-react';
+import { AppModal } from './AppModal';
 
 export const ReviewMode: React.FC = () => {
   const { activeMaterialId, setQuestions, setLoadingQuestions, isLoadingQuestions, setActiveBlockId, documentBlocks, setMode } = useStore();
@@ -70,22 +71,23 @@ export const ReviewMode: React.FC = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!currentQuestion) return;
-    if (confirm("Are you sure you want to delete this question?")) {
-      try {
-        await deleteQuestion(currentQuestion.id);
-        const newApproved = approved.filter(q => q.id !== currentQuestion.id);
-        setApproved(newApproved);
-        
-        setQuestions(useStore.getState().questions.filter((q: Question) => q.id !== currentQuestion.id));
+  const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
 
-        if (currentIndex >= newApproved.length && currentIndex > 0) {
-          setCurrentIndex(i => i - 1);
-        }
-      } catch (err) {
-        alert("Failed to delete question.");
+  const confirmDelete = async () => {
+    if (!questionToDelete) return;
+    try {
+      await deleteQuestion(questionToDelete.id);
+      const newApproved = approved.filter(q => q.id !== questionToDelete.id);
+      setApproved(newApproved);
+      
+      setQuestions(useStore.getState().questions.filter((q: Question) => q.id !== questionToDelete.id));
+
+      if (currentIndex >= newApproved.length && currentIndex > 0) {
+        setCurrentIndex(i => i - 1);
       }
+      setQuestionToDelete(null);
+    } catch (err) {
+      alert("Failed to delete question.");
     }
   };
 
@@ -126,7 +128,7 @@ export const ReviewMode: React.FC = () => {
           </div>
           <div className="flex gap-sm">
             <button
-              onClick={handleDelete}
+              onClick={() => setQuestionToDelete(currentQuestion)}
               className="text-error hover:bg-error/10 px-sm py-xs rounded flex items-center gap-xs transition-colors text-label-sm font-bold"
             >
               <Trash2 size={16} />
@@ -163,6 +165,33 @@ export const ReviewMode: React.FC = () => {
           question={currentQuestion}
           onClose={() => setEditingQuestion(false)}
         />
+      )}
+
+      {questionToDelete && (
+        <AppModal isOpen={true} onClose={() => setQuestionToDelete(null)} title="Delete Question?" hideCloseButton>
+          <div className="flex flex-col items-center text-center mt-md">
+            <div className="w-12 h-12 rounded-full bg-error-container text-error flex items-center justify-center mb-md">
+              <Trash2 size={24} />
+            </div>
+            <p className="text-body-md text-on-surface-variant w-full whitespace-normal break-words">
+              Are you sure you want to delete this question? This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end gap-sm mt-xl">
+            <button
+              onClick={() => setQuestionToDelete(null)}
+              className="px-lg py-sm rounded-full text-label-md font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-lg py-sm rounded-full text-label-md font-bold bg-error text-on-error hover:bg-error/90 transition-colors shadow-sm"
+            >
+              Delete
+            </button>
+          </div>
+        </AppModal>
       )}
     </div>
   );
