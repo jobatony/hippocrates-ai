@@ -109,11 +109,9 @@ describe('QuizPage', () => {
       vi.advanceTimersByTime(1000);
     });
 
-    // We should see the first review card or first new card. Wait for it to appear.
+    // We should see the FIRST NEW card initially, because consecutiveReviewsRef is initialized to 2 (triggering New)
     let currentText = screen.getByRole('heading', { level: 1 }).textContent;
-    const isFirstReview = currentText?.includes('review-1');
-    const isFirstNew = currentText?.includes('new-1');
-    expect(isFirstReview || isFirstNew).toBe(true);
+    expect(currentText).toContain('new-1');
 
     // Answer it and proceed
     fireEvent.click(screen.getByText('Apple')); // Correct answer
@@ -129,13 +127,43 @@ describe('QuizPage', () => {
     await act(async () => {
     });
 
-    // The next card should be of the OPPOSITE type
+    // The second card should be a REVIEW card
     const secondText = screen.getByRole('heading', { level: 1 }).textContent;
-    if (isFirstReview) {
-      expect(secondText).toContain('new-1');
-    } else {
-      expect(secondText).toContain('review-1');
-    }
+    expect(secondText).toContain('review-1');
+
+    // Answer it and proceed
+    fireEvent.click(screen.getByText('Apple')); // Correct answer
+    vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
+      streak: 3,
+      mastered: true,
+      next_scheduled: null,
+      available_at: 0,
+    } as any);
+    fireEvent.click(screen.getByRole('button', { name: /Next Question/i }));
+
+    await act(async () => {
+    });
+
+    // The third card should ALSO be a REVIEW card (because 1 New, 2 Review)
+    const thirdText = screen.getByRole('heading', { level: 1 }).textContent;
+    expect(thirdText).toContain('review-2');
+
+    // Answer it and proceed
+    fireEvent.click(screen.getByText('Apple'));
+    vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
+      streak: 3,
+      mastered: true,
+      next_scheduled: null,
+      available_at: 0,
+    } as any);
+    fireEvent.click(screen.getByRole('button', { name: /Next Question/i }));
+
+    await act(async () => {
+    });
+
+    // The fourth card should be NEW again
+    const fourthText = screen.getByRole('heading', { level: 1 }).textContent;
+    expect(fourthText).toContain('new-2');
   });
 
   it('re-queues cards and serves them when their cooldown expires', async () => {

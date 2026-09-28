@@ -34,7 +34,7 @@ export const QuizPage: React.FC = () => {
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [countdownText, setCountdownText] = useState<string>('');
 
-  const lastServedTypeRef = useRef<'new' | 'review' | null>(null);
+  const consecutiveReviewsRef = useRef<number>(2);
 
   useEffect(() => {
     let ignore = false;
@@ -122,20 +122,20 @@ export const QuizPage: React.FC = () => {
         let selectedIdx = -1;
 
         if (dueReviews.length > 0 && readyNew.length > 0) {
-          // Even alternation: 1 new, 1 review, 1 new, 1 review
-          if (lastServedTypeRef.current === 'review') {
+          // Even alternation: 1 new, 2 review
+          if (consecutiveReviewsRef.current >= 2) {
             selectedIdx = readyNew[0].idx;
-            lastServedTypeRef.current = 'new';
+            consecutiveReviewsRef.current = 0;
           } else {
             selectedIdx = dueReviews[0].idx;
-            lastServedTypeRef.current = 'review';
+            consecutiveReviewsRef.current += 1;
           }
         } else if (dueReviews.length > 0) {
           selectedIdx = dueReviews[0].idx;
-          lastServedTypeRef.current = 'review';
+          consecutiveReviewsRef.current += 1;
         } else if (readyNew.length > 0) {
           selectedIdx = readyNew[0].idx;
-          lastServedTypeRef.current = 'new';
+          consecutiveReviewsRef.current = 0;
         }
 
         if (selectedIdx !== -1) {

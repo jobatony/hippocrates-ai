@@ -249,15 +249,18 @@ Every card in the `activeQueue` is classified:
 - **Due Review**: `(streak > 0 OR availableAt > 0)` AND `availableAt <= now` — previously answered and cooldown has expired.
 - **On Cooldown**: `availableAt > now` — answered and waiting to reappear.
 
-### Even Alternation (1 New, 1 Review)
-When both due reviews and unattempted cards are available simultaneously, the queue runner **alternates** between them using a `lastServedTypeRef`:
+### Even Alternation (1 New, 2 Review)
+When both due reviews and unattempted cards are available simultaneously, the queue runner **alternates** between them using a `consecutiveReviewsRef` to enforce a 1:2 ratio:
 
 ```
-→ Review card (if last was new)
-→ New card (if last was review)
+→ New card
+→ Review card
+→ Review card
+→ New card
+...
 ```
 
-This prevents a user from plowing through only new cards and then being bombarded by reviews at the end, or vice versa.
+This ensures a steady mix of new material while prioritizing the clearance of due reviews, without bombarding the user with all reviews at once.
 
 ### When Only One Type Is Available
 - If only due reviews exist, they are served continuously.
