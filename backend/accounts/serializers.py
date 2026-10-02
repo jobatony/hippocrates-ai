@@ -65,7 +65,12 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    groups = serializers.SerializerMethodField()
+
     class Meta:
         model  = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'is_email_verified', 'created_at']
+        fields = ['id', 'first_name', 'last_name', 'email', 'is_email_verified', 'created_at', 'groups']
         read_only_fields = fields
+
+    def get_groups(self, obj):
+        return list(obj.groups.values_list('name', flat=True))

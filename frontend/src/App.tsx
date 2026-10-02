@@ -8,6 +8,9 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { DashboardPage } from './pages/DashboardPage';
 import { QuizPage } from './pages/QuizPage';
+import { RoleRoute } from './components/RoleRoute';
+import { UploaderDashboard } from './pages/DataEntry/UploaderDashboard';
+import { ValidatorDashboard } from './pages/DataEntry/ValidatorDashboard';
 
 import { LandingPage } from './pages/LandingPage';
 
@@ -49,6 +52,28 @@ function App() {
           element={
             <ProtectedRoute>
               <QuizPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/data-entry/upload"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['Uploader']}>
+                <UploaderDashboard />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/data-entry/validate"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={['Validator']}>
+                <ValidatorDashboard />
+              </RoleRoute>
             </ProtectedRoute>
           }
         />

@@ -79,6 +79,7 @@ export interface AuthUser {
   last_name: string;
   email: string;
   is_email_verified: boolean;
+  groups: string[];
   created_at: string;
   tags: { id: string; name: string }[];
   question_count: number;
@@ -526,3 +527,115 @@ export async function submitCardAnswer(
   return res.json();
 }
 
+
+// ─── Past Questions ──────────────────────────────────────────────────────────
+
+export interface Exam {
+  id: number;
+  name: string;
+}
+
+export interface Subject {
+  id: number;
+  name: string;
+}
+
+export interface QuestionOption {
+  id?: number;
+  letter: string;
+  text: string;
+  is_correct: boolean;
+}
+
+export interface PastQuestion {
+  id: number;
+  exam: number;
+  exam_name: string;
+  subject: number;
+  subject_name: string;
+  year: number;
+  number: number;
+  question_text: string;
+  has_diagram: boolean;
+  image: string | null;
+  status: 'pending' | 'approved' | 'changes_requested';
+  validator_feedback: string | null;
+  options: QuestionOption[];
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchExams(): Promise<Exam[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/exams/`);
+  return res.json();
+}
+
+export async function fetchSubjects(): Promise<Subject[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/subjects/`);
+  return res.json();
+}
+
+export async function fetchUploaderQuestions(exam?: number, subject?: number, year?: number): Promise<PastQuestion[]> {
+  let url = `${BASE_URL}/past-questions/uploader/questions/`;
+  const params = new URLSearchParams();
+  if (exam) params.append('exam', exam.toString());
+  if (subject) params.append('subject', subject.toString());
+  if (year) params.append('year', year.toString());
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  const res = await authFetch(url);
+  return res.json();
+}
+
+export async function uploadPastQuestion(data: Partial<PastQuestion>): Promise<PastQuestion> {
+  const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
+  return res.json();
+}
+
+export async function updatePastQuestion(id: number, data: Partial<PastQuestion>): Promise<PastQuestion> {
+  const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
+  return res.json();
+}
+
+export async function fetchValidatorQuestions(exam?: number, subject?: number): Promise<PastQuestion[]> {
+  let url = `${BASE_URL}/past-questions/validator/questions/`;
+  const params = new URLSearchParams();
+  if (exam) params.append('exam', exam.toString());
+  if (subject) params.append('subject', subject.toString());
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  const res = await authFetch(url);
+  return res.json();
+}
+
+export async function validatePastQuestion(id: number, action: 'approve' | 'request_changes', feedback?: string): Promise<{ status: string }> {
+  const res = await authFetch(`${BASE_URL}/past-questions/validator/questions/${id}/validate/`, {
+    method: 'POST',
+    body: JSON.stringify({ action, feedback }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to validate question');
+  }
+  return res.json();
+}
