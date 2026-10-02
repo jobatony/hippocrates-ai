@@ -121,22 +121,13 @@ export const Layout: React.FC = () => {
     activeMaterialId, setActiveMaterial,
     setDocumentBlocks, setLoadingDocument,
     setQuestions, setLoadingQuestions,
-    currentUser, logout, setCurrentUser, isAuthenticated,
     activeRequestCount,
     setFlagBlockId,
     searchResults, searchQuery, setSearchResults,
     scrollProgress
   } = useStore();
 
-  useEffect(() => {
-    if (isAuthenticated && !currentUser) {
-      import('../api').then(({ fetchMe }) => {
-        fetchMe()
-          .then(setCurrentUser)
-          .catch(() => logout());
-      });
-    }
-  }, [isAuthenticated, currentUser, setCurrentUser, logout]);
+
 
   const MAX_QUEUE = 20;
 
