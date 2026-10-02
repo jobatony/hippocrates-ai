@@ -243,7 +243,7 @@ const FillInQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorre
             const selectedItem = userBankIdx !== undefined ? payload.answer_bank[userBankIdx] : null;
             const isGapCorrect = selectedItem?.correct_for_gaps?.includes(gapIdx);
             
-            let selectClass = "mx-2 px-3 py-1.5 rounded-lg border appearance-none font-title-md bg-surface text-primary outline-none transition-colors align-middle ";
+            let selectClass = "mx-2 px-3 py-1.5 rounded-lg border appearance-none font-title-md bg-surface text-primary outline-none transition-colors align-middle max-w-[130px] sm:max-w-[200px] md:max-w-xs text-ellipsis overflow-hidden whitespace-nowrap ";
             if (!answered) {
               selectClass += "border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer hover:bg-surface-bright";
             } else {
@@ -253,8 +253,8 @@ const FillInQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorre
             }
 
             return (
-              <span key={i} className="inline-flex items-center whitespace-nowrap gap-2">
-                <span className="relative inline-block">
+              <span key={i} className="inline-flex flex-wrap items-center gap-2 align-middle">
+                <span className="relative inline-block max-w-full">
                   <select 
                     className={selectClass} 
                     value={userBankIdx ?? ""} 
@@ -275,7 +275,7 @@ const FillInQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorre
                   )}
                 </span>
                 {answered && !isGapCorrect && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-error-container/20 text-error font-title-sm font-bold border border-error/40 align-middle">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-error-container/20 text-error font-title-sm font-bold border border-error/40 align-middle max-w-[150px] sm:max-w-[250px] text-ellipsis overflow-hidden whitespace-nowrap">
                     {payload.answer_bank.filter((o: any) => o.correct_for_gaps?.includes(gapIdx)).map((o: any) => o.text).join(" / ")}
                   </span>
                 )}

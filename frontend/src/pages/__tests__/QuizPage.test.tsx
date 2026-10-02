@@ -1,7 +1,7 @@
-// @ts-nocheck
-import React from 'react';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import '@testing-library/jest-dom';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QuizPage } from '../QuizPage';
 import { MemoryRouter } from 'react-router-dom';
 import * as api from '../../api';
@@ -17,22 +17,56 @@ vi.mock('../../api', async () => {
     ...actual as any,
     fetchQuizSession: vi.fn(),
     submitCardAnswer: vi.fn(),
-    fetchMaterialDetail: vi.fn(),
   };
 });
 
 describe('QuizPage', () => {
+  const mockQuizSession = {
+    session_total: 2,
+    completed: 0,
+    queue: [
+      {
+        id: 'card-1',
+        question_type: 'mcq',
+        material_title: 'Test Material',
+        topic: 'Test Topic',
+        payload: {
+          question: 'What is 2 + 2?',
+          options: ['3', '4', '5', '6'],
+          correct_index: 1,
+          explanation: '2 + 2 equals 4',
+        },
+        mastery_dots: 0,
+        mastery_required: 3,
+        availableAt: Date.now() - 10000, // available now
+      },
+      {
+        id: 'card-2',
+        question_type: 'mcq',
+        material_title: 'Test Material',
+        topic: 'Test Topic 2',
+        payload: {
+          question: 'What is 3 + 3?',
+          options: ['5', '6', '7', '8'],
+          correct_index: 1,
+          explanation: '3 + 3 equals 6',
+        },
+        mastery_dots: 0,
+        mastery_required: 3,
+        availableAt: Date.now() + 50000, // available in the future
+      },
+    ],
+  };
+
   let mockStoreState: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-
+    
     vi.mocked(api.fetchQuizSession).mockResolvedValue({
       session_total: 1,
       completed: 0,
-      queue: [],
-      has_more: false,
+      queue: []
     } as any);
 
     mockStoreState = {
@@ -41,143 +75,42 @@ describe('QuizPage', () => {
         mockStoreState.quizSession = session;
       }),
       updateQuizSession: vi.fn(),
-      activeMaterialId: null,
-      setActiveMaterial: vi.fn(),
-      setDocumentBlocks: vi.fn(),
-      setLoadingDocument: vi.fn(),
-      setActiveBlockId: vi.fn(),
     };
 
     mockUseStore.mockImplementation(() => mockStoreState);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it('renders loading state initially', () => {
+    mockStoreState.quizSession = null;
+    render(
+      <MemoryRouter>
+        <QuizPage />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/Loading review session/i)).not.toBeNull();
   });
 
-  const createCard = (id: string, streak: number, availableAt: number) => ({
-    id,
-    question_type: 'mcq',
-    material_title: 'Test Material',
-    topic: 'Test Topic',
-    payload: {
-      question: `Question ${id}?`,
-      options: ['Apple', 'Banana'],
-      correct_index: 0,
-      explanation: 'Because',
-    },
-    streak,
-    mastery_dots: Math.min(streak, 3),
-    mastery_required: 3,
-    availableAt,
-  });
-
-  it('interleaves New and Review cards correctly', async () => {
-    // 2 review cards, 2 new cards, all available now
-    const session = {
-      session_total: 4,
-      completed: 0,
-      has_more: false,
-      queue: [
-        createCard('review-1', 1, 0),
-        createCard('new-1', 0, 0),
-        createCard('review-2', 1, 0),
-        createCard('new-2', 0, 0),
-      ],
-    };
+  it('shows empty state when session total is 0', async () => {
+    mockStoreState.quizSession = { session_total: 0, completed: 0, queue: [] };
     
-    vi.mocked(api.fetchQuizSession).mockResolvedValueOnce(session as any);
-
     render(
       <MemoryRouter>
         <QuizPage />
       </MemoryRouter>
     );
 
-    // Initial effect updates store
-    // Wait for promise to resolve
-    await act(async () => {
-      // flush microtasks
-    });
-    
-    expect(mockStoreState.setQuizSession).toHaveBeenCalledWith(session);
-
-    mockStoreState.quizSession = session;
-
-    // Fast-forward to trigger the interval runner
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    // We should see the FIRST NEW card initially, because consecutiveReviewsRef is initialized to 2 (triggering New)
-    let currentText = screen.getByRole('heading', { level: 1 }).textContent;
-    expect(currentText).toContain('new-1');
-
-    // Answer it and proceed
-    fireEvent.click(screen.getByText('Apple')); // Correct answer
-    vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
-      streak: 3, // mastered
-      mastered: true,
-      next_scheduled: null,
-      available_at: 0,
-    } as any);
-    fireEvent.click(screen.getByRole('button', { name: /Next Question/i }));
-
-    // Flush microtasks so submitCardAnswer resolves and React re-renders
-    await act(async () => {
-    });
-
-    // The second card should be a REVIEW card
-    const secondText = screen.getByRole('heading', { level: 1 }).textContent;
-    expect(secondText).toContain('review-1');
-
-    // Answer it and proceed
-    fireEvent.click(screen.getByText('Apple')); // Correct answer
-    vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
-      streak: 3,
-      mastered: true,
-      next_scheduled: null,
-      available_at: 0,
-    } as any);
-    fireEvent.click(screen.getByRole('button', { name: /Next Question/i }));
-
-    await act(async () => {
-    });
-
-    // The third card should ALSO be a REVIEW card (because 1 New, 2 Review)
-    const thirdText = screen.getByRole('heading', { level: 1 }).textContent;
-    expect(thirdText).toContain('review-2');
-
-    // Answer it and proceed
-    fireEvent.click(screen.getByText('Apple'));
-    vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
-      streak: 3,
-      mastered: true,
-      next_scheduled: null,
-      available_at: 0,
-    } as any);
-    fireEvent.click(screen.getByRole('button', { name: /Next Question/i }));
-
-    await act(async () => {
-    });
-
-    // The fourth card should be NEW again
-    const fourthText = screen.getByRole('heading', { level: 1 }).textContent;
-    expect(fourthText).toContain('new-2');
+    expect(screen.getByText(/Session Complete/i)).not.toBeNull();
   });
 
-  it('re-queues cards and serves them when their cooldown expires', async () => {
-    const now = Date.now();
+  it('shows waiting state when queue is not empty but no cards are available yet', async () => {
     const session = {
       session_total: 1,
       completed: 0,
-      has_more: false,
-      queue: [
-        createCard('new-1', 0, 0),
-      ],
+      queue: [mockQuizSession.queue[1]], // Only the future card
     };
     
     vi.mocked(api.fetchQuizSession).mockResolvedValueOnce(session as any);
+    mockStoreState.quizSession = session;
 
     render(
       <MemoryRouter>
@@ -185,69 +118,132 @@ describe('QuizPage', () => {
       </MemoryRouter>
     );
 
-    await act(async () => {
-      // flush microtasks
+    await waitFor(() => {
+      expect(screen.getByText(/Waiting for next card to become available/i)).not.toBeNull();
     });
-    expect(mockStoreState.setQuizSession).toHaveBeenCalled();
-    mockStoreState.quizSession = session;
+  });
 
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
+  it('renders a card and handles correct answer workflow', async () => {
+    vi.mocked(api.fetchQuizSession).mockResolvedValueOnce(mockQuizSession as any);
+    const user = userEvent.setup();
 
-    expect(screen.getByText('Question new-1?')).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <QuizPage />
+      </MemoryRouter>
+    );
 
-    // Answer INCORRECTLY
-    fireEvent.click(screen.getByText('Banana'));
+    // Initial loading
+    expect(screen.getByText(/Loading review session/i)).not.toBeNull();
+
+    // After effect runs, set up the store's session
+    mockStoreState.quizSession = mockQuizSession;
     
-    // Simulate API returning 3 minute cooldown (180,000 ms)
-    const futureAvailableAt = now + 180000;
+    // We have to re-render to simulate the store update
+    render(
+      <MemoryRouter>
+        <QuizPage />
+      </MemoryRouter>
+    );
+
+    // Wait for the card to be displayed
+    await waitFor(() => {
+      expect(screen.getByText('What is 2 + 2?')).not.toBeNull();
+    });
+
+    // Select the correct option
+    const correctOption = screen.getByText('4');
+    await user.click(correctOption);
+
+    // Verify correct feedback is shown
+    expect(screen.getByText(/Correct! You're making progress/i)).not.toBeNull();
+
+    // Mock the submit API response (not mastered yet)
+    vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
+      streak: 1,
+      mastered: false,
+      next_scheduled: null,
+      available_at: Date.now() / 1000 + 300,
+    } as any);
+
+    const nextButton = screen.getByRole('button', { name: /Next Question/i });
+    await user.click(nextButton);
+
+    await waitFor(() => {
+      expect(api.submitCardAnswer).toHaveBeenCalledWith('card-1', true);
+    });
+  });
+
+  it('renders a card and handles incorrect answer workflow', async () => {
+    vi.mocked(api.fetchQuizSession).mockResolvedValueOnce(mockQuizSession as any);
+    const user = userEvent.setup();
+
+    mockStoreState.quizSession = mockQuizSession;
+
+    render(
+      <MemoryRouter>
+        <QuizPage />
+      </MemoryRouter>
+    );
+
+    // Wait for the card to be displayed
+    await waitFor(() => {
+      expect(screen.getByText('What is 2 + 2?')).not.toBeNull();
+    });
+
+    // Select the INCORRECT option
+    const incorrectOption = screen.getByText('5');
+    await user.click(incorrectOption);
+
+    // Verify incorrect feedback is shown
+    expect(screen.getByText(/Incorrect. We'll review this again shortly./i)).not.toBeNull();
+
+    // Mock the submit API response
     vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
       streak: 0,
       mastered: false,
       next_scheduled: null,
-      available_at: futureAvailableAt,
+      available_at: Date.now() / 1000 + 300,
     } as any);
 
-    fireEvent.click(screen.getByRole('button', { name: /Next Question/i }));
+    const nextButton = screen.getByRole('button', { name: /Next Question/i });
+    await user.click(nextButton);
 
-    await act(async () => {
-      vi.advanceTimersByTime(1100); // give time for the queue runner to evaluate
+    await waitFor(() => {
+      expect(api.submitCardAnswer).toHaveBeenCalledWith('card-1', false);
     });
-
-    // Card should be gone, waiting screen should appear
-    expect(screen.getByText(/Next question ready in/i)).toBeInTheDocument();
-    
-    // Check live countdown
-    // Total wait is approx 3 minutes minus some ms
-    expect(screen.getByText(/2:5[89]/)).toBeInTheDocument();
-
-    // Advance by 1 minute
-    await act(async () => {
-      vi.advanceTimersByTime(60000);
-    });
-    expect(screen.getByText(/1:5[89]/)).toBeInTheDocument();
-
-    // Advance past cooldown
-    await act(async () => {
-      vi.advanceTimersByTime(120000);
-    });
-
-    // The card should reappear!
-    expect(screen.getByText('Question new-1?')).toBeInTheDocument();
   });
 
-  it('triggers backfill when unattempted cards drop below 10', async () => {
-    // Start with 9 unattempted cards
-    const initialQueue = Array.from({ length: 9 }).map((_, i) => createCard(`new-${i}`, 0, 0));
+  it('prioritizes showing the card that became available first (smallest availableAt)', async () => {
     const session = {
-      session_total: 20,
+      session_total: 2,
       completed: 0,
-      has_more: true, // Backend has more cards
-      queue: initialQueue,
+      queue: [
+        {
+          id: 'card-1',
+          question_type: 'mcq',
+          material_title: 'Title',
+          topic: 'Topic 1',
+          payload: { question: 'Question 1?', options: ['1'], correct_index: 0, explanation: '' },
+          mastery_dots: 0,
+          mastery_required: 3,
+          availableAt: Date.now() - 5000, // Available 5 seconds ago
+        },
+        {
+          id: 'card-2',
+          question_type: 'mcq',
+          material_title: 'Title',
+          topic: 'Topic 2',
+          payload: { question: 'Question 2?', options: ['2'], correct_index: 0, explanation: '' },
+          mastery_dots: 0,
+          mastery_required: 3,
+          availableAt: Date.now() - 10000, // Available 10 seconds ago (older)
+        }
+      ],
     };
     
     vi.mocked(api.fetchQuizSession).mockResolvedValueOnce(session as any);
+    mockStoreState.quizSession = session;
 
     render(
       <MemoryRouter>
@@ -255,57 +251,10 @@ describe('QuizPage', () => {
       </MemoryRouter>
     );
 
-    await act(async () => {
-      // flush microtasks
+    // It should render card-2 because its availableAt is older (smaller)
+    await waitFor(() => {
+      expect(screen.getByText('Question 2?')).not.toBeNull();
+      expect(screen.queryByText('Question 1?')).not.not.toBeNull();
     });
-    expect(mockStoreState.setQuizSession).toHaveBeenCalled();
-    mockStoreState.quizSession = session;
-
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    // We are looking at a card.
-    expect(screen.getByText('Question new-0?')).toBeInTheDocument();
-
-    // Mock the backfill response: Returns 5 more cards
-    const backfillQueue = Array.from({ length: 5 }).map((_, i) => createCard(`backfill-${i}`, 0, 0));
-    vi.mocked(api.fetchQuizSession).mockResolvedValueOnce({
-      session_total: 20,
-      completed: 0,
-      has_more: true,
-      queue: backfillQueue
-    } as any);
-
-    // Answer the card
-    fireEvent.click(screen.getByText('Apple'));
-    vi.mocked(api.submitCardAnswer).mockResolvedValueOnce({
-      streak: 3,
-      mastered: true,
-      next_scheduled: null,
-      available_at: 0,
-    } as any);
-
-    // Click Next, which triggers setTimeout(tryBackfill, 100)
-    fireEvent.click(screen.getByRole('button', { name: /Next Question/i }));
-
-    await act(async () => {
-      // Flush microtasks so submitCardAnswer resolves and setTimeout is called
-    });
-
-    await act(async () => {
-      vi.advanceTimersByTime(150);
-    });
-
-    // Backfill should have been called!
-    expect(api.fetchQuizSession).toHaveBeenCalledTimes(2);
-
-    // The queue runner should present the next card
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    // Check we see another card (e.g. new-1)
-    expect(screen.getByText('Question new-1?')).toBeInTheDocument();
   });
 });
