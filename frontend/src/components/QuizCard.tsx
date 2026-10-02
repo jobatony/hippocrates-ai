@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Check, X, Lightbulb } from 'lucide-react';
 import type { QuizCard as ApiQuizCard } from '../api';
 
@@ -224,6 +224,16 @@ const FillInQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorre
 
   const segments = payload.question_text.split(/(\{gap_\d+\})/g);
 
+  // Randomize the answer bank indices once per question
+  const shuffledBankIndices = useMemo(() => {
+    const indices = payload.answer_bank.map((_: any, idx: number) => idx);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return indices;
+  }, [payload.answer_bank]);
+
   const handleSelect = (gapIdx: number, bankIdx: number) => {
     if (answered) return;
     setAnswers(prev => ({ ...prev, [gapIdx]: bankIdx }));
@@ -262,8 +272,8 @@ const FillInQuiz: React.FC<{ payload: any, answered: boolean, onReveal: (isCorre
                     disabled={answered}
                   >
                     <option value="" disabled>Select...</option>
-                    {payload.answer_bank.map((opt: any, bIdx: number) => (
-                      <option key={bIdx} value={bIdx}>{opt.text}</option>
+                    {shuffledBankIndices.map((bIdx: number) => (
+                      <option key={bIdx} value={bIdx}>{payload.answer_bank[bIdx].text}</option>
                     ))}
                   </select>
                   {answered && (

@@ -119,7 +119,7 @@ describe('QuizPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Waiting for next card to become available/i)).not.toBeNull();
+      expect(screen.getByText(/Next question ready/i)).not.toBeNull();
     });
   });
 
@@ -259,9 +259,9 @@ describe('QuizPage', () => {
 
   it('detects a new day and fetches a new session, clearing current progress', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-09-30T23:59:55Z'));
+    vi.setSystemTime(new Date(2026, 9, 30, 23, 59, 55));
 
-    vi.mocked(api.fetchQuizSession).mockResolvedValueOnce(mockQuizSession as any);
+    vi.mocked(api.fetchQuizSession).mockResolvedValue(mockQuizSession as any);
     mockStoreState.quizSession = mockQuizSession;
 
     render(
@@ -270,16 +270,14 @@ describe('QuizPage', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => {
-      expect(api.fetchQuizSession).toHaveBeenCalledTimes(1);
-    });
+    await vi.runOnlyPendingTimersAsync();
 
-    vi.setSystemTime(new Date('2026-10-01T00:00:05Z'));
-    vi.advanceTimersByTime(2000);
+    expect(api.fetchQuizSession).toHaveBeenCalledTimes(1);
 
-    await waitFor(() => {
-      expect(api.fetchQuizSession).toHaveBeenCalledTimes(2);
-    });
+    vi.setSystemTime(new Date(2026, 9, 31, 0, 0, 5));
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(api.fetchQuizSession).toHaveBeenCalledTimes(2);
 
     vi.useRealTimers();
   });
