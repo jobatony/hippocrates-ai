@@ -139,8 +139,10 @@ export const QuizPage: React.FC = () => {
         let selectedIdx = -1;
 
         if (dueReviews.length > 0 && readyNew.length > 0) {
-          // Even alternation: 1 new, 2 review
-          if (consecutiveReviewsRef.current >= 2) {
+          const currentHour = new Date(now).getHours();
+          const targetReviews = currentHour >= 21 ? 4 : 2;
+
+          if (consecutiveReviewsRef.current >= targetReviews) {
             selectedIdx = readyNew[0].idx;
             consecutiveReviewsRef.current = 0;
           } else {
