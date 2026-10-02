@@ -35,6 +35,7 @@ export const QuizPage: React.FC = () => {
   const [countdownText, setCountdownText] = useState<string>('');
 
   const consecutiveReviewsRef = useRef<number>(2);
+  const sessionDateRef = useRef<string>(new Date().toDateString());
 
   useEffect(() => {
     let ignore = false;
@@ -84,6 +85,22 @@ export const QuizPage: React.FC = () => {
   useEffect(() => {
     const checkQueue = () => {
       const now = Date.now();
+
+      const todayStr = new Date(now).toDateString();
+      if (sessionDateRef.current !== todayStr) {
+        sessionDateRef.current = todayStr;
+        fetchQuizSession()
+          .then(session => {
+            setQuizSession(session);
+            setHasMore(session.has_more ?? false);
+            setActiveQueue(session.queue);
+            setCurrentCard(null);
+            setAnswered(false);
+            setWasCorrect(false);
+          })
+          .catch(err => console.error("Failed to load new day session", err));
+        return;
+      }
 
       // Update countdown timer for waiting screen if currentCard is null
       if (!currentCard && activeQueue.length > 0) {

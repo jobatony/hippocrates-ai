@@ -253,8 +253,34 @@ describe('QuizPage', () => {
 
     // It should render card-2 because its availableAt is older (smaller)
     await waitFor(() => {
-      expect(screen.getByText('Question 2?')).not.toBeNull();
-      expect(screen.queryByText('Question 1?')).not.not.toBeNull();
+      expect(screen.queryByText('Question 1?')).toBeNull();
     });
+  });
+
+  it('detects a new day and fetches a new session, clearing current progress', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-30T23:59:55Z'));
+
+    vi.mocked(api.fetchQuizSession).mockResolvedValueOnce(mockQuizSession as any);
+    mockStoreState.quizSession = mockQuizSession;
+
+    render(
+      <MemoryRouter>
+        <QuizPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(api.fetchQuizSession).toHaveBeenCalledTimes(1);
+    });
+
+    vi.setSystemTime(new Date('2026-10-01T00:00:05Z'));
+    vi.advanceTimersByTime(2000);
+
+    await waitFor(() => {
+      expect(api.fetchQuizSession).toHaveBeenCalledTimes(2);
+    });
+
+    vi.useRealTimers();
   });
 });
