@@ -109,4 +109,27 @@ describe('DashboardPage', () => {
       expect(masteredElements.length).toBeGreaterThan(0);
     });
   });
+
+  it('fetches previous month stats when Previous Month button is clicked', async () => {
+    vi.mocked(api.fetchDashboardStats).mockResolvedValue(mockStats);
+    renderWithRouter(<DashboardPage />);
+    
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading your clinical dashboard/i)).not.toBeInTheDocument();
+    });
+
+    const prevButton = screen.getByLabelText('Previous Month');
+    
+    // Clear mock calls to easily check the next call
+    vi.mocked(api.fetchDashboardStats).mockClear();
+
+    fireEvent.click(prevButton);
+
+    const now = new Date();
+    now.setMonth(now.getMonth() - 1);
+    
+    await waitFor(() => {
+      expect(api.fetchDashboardStats).toHaveBeenCalledWith(now.getFullYear(), now.getMonth() + 1);
+    });
+  });
 });

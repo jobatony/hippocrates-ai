@@ -188,7 +188,18 @@ class DashboardStatsView(APIView):
         CREATION_STREAK_MINIMUM = 50
 
         # Current month's activity
-        start_of_month = today.replace(day=1)
+        year_str = request.query_params.get('year')
+        month_str = request.query_params.get('month')
+
+        if year_str and month_str:
+            try:
+                from datetime import date
+                start_of_month = date(int(year_str), int(month_str), 1)
+            except ValueError:
+                start_of_month = today.replace(day=1)
+        else:
+            start_of_month = today.replace(day=1)
+
         if start_of_month.month == 12:
             end_of_month = start_of_month.replace(year=start_of_month.year + 1, month=1, day=1) - timedelta(days=1)
         else:

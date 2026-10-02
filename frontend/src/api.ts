@@ -462,8 +462,12 @@ export interface DashboardStats {
   cards_mastered_today: number;
 }
 
-export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const res = await authFetch(`${BASE_URL}/questions/dashboard/stats/`);
+export async function fetchDashboardStats(year?: number, month?: number): Promise<DashboardStats> {
+  let url = `${BASE_URL}/questions/dashboard/stats/`;
+  if (year && month) {
+    url += `?year=${year}&month=${month}`;
+  }
+  const res = await authFetch(url);
   if (!res.ok) throw new Error('Failed to fetch dashboard stats');
   return res.json();
 }

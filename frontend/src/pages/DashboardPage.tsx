@@ -19,10 +19,10 @@ export const DashboardPage: React.FC = () => {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   useEffect(() => {
-    fetchDashboardStats()
+    fetchDashboardStats(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1)
       .then(stats => setDashboardStats(stats))
       .catch(err => console.error("Failed to load dashboard stats", err));
-  }, [setDashboardStats]);
+  }, [setDashboardStats, calendarMonth]);
 
   if (!dashboardStats) {
     return (
