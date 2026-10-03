@@ -12,15 +12,21 @@ class IsValidator(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.groups.filter(name='Validator').exists()
 
-class ExamViewSet(viewsets.ReadOnlyModelViewSet):
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+        return request.user and (request.user.is_staff or request.user.is_superuser)
+
+class ExamViewSet(viewsets.ModelViewSet):
     queryset = Exam.objects.all().order_by('name')
     serializer_class = ExamSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
 
-class SubjectViewSet(viewsets.ReadOnlyModelViewSet):
+class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all().order_by('name')
     serializer_class = SubjectSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
 
 class UploaderQuestionViewSet(viewsets.ModelViewSet):
     serializer_class = PastQuestionSerializer

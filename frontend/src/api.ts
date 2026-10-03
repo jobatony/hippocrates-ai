@@ -80,6 +80,8 @@ export interface AuthUser {
   email: string;
   is_email_verified: boolean;
   groups: string[];
+  is_staff: boolean;
+  is_superuser: boolean;
   created_at: string;
   tags: { id: string; name: string }[];
   question_count: number;
@@ -637,5 +639,54 @@ export async function validatePastQuestion(id: number, action: 'approve' | 'requ
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to validate question');
   }
+  return res.json();
+}
+
+// ─── Admin Management ────────────────────────────────────────────────────────
+
+export async function createExam(name: string): Promise<Exam> {
+  const res = await authFetch(`${BASE_URL}/past-questions/exams/`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create exam');
+  return res.json();
+}
+
+export async function deleteExam(id: number): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/past-questions/exams/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete exam');
+}
+
+export async function createSubject(name: string): Promise<Subject> {
+  const res = await authFetch(`${BASE_URL}/past-questions/subjects/`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create subject');
+  return res.json();
+}
+
+export async function deleteSubject(id: number): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/past-questions/subjects/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete subject');
+}
+
+export async function fetchAdminUsers(search: string = ''): Promise<AuthUser[]> {
+  const res = await authFetch(`${BASE_URL}/auth/admin/users/?search=${encodeURIComponent(search)}`);
+  if (!res.ok) throw new Error('Failed to fetch users');
+  return res.json();
+}
+
+export async function updateUserRoles(userId: string, roles: string[]): Promise<AuthUser> {
+  const res = await authFetch(`${BASE_URL}/auth/admin/users/${userId}/roles/`, {
+    method: 'POST',
+    body: JSON.stringify({ roles }),
+  });
+  if (!res.ok) throw new Error('Failed to update roles');
   return res.json();
 }

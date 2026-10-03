@@ -243,3 +243,45 @@ class MeView(APIView):
     def get(self, request):
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data)
+
+from django.contrib.auth.models import Group
+from rest_framework.permissions import IsAdminUser
+
+class AdminUserManagementView(APIView):
+    """GET /api/auth/admin/users/ (list users with search), POST /api/auth/admin/users/<id>/roles/ (assign roles)"""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        search_query = request.query_params.get('search', '')
+        users = User.objects.all()
+        if search_query:
+            users = users.filter(email__icontains=search_query) | users.filter(first_name__icontains=search_query) | users.filter(last_name__icontains=search_query)
+        users = users[:50] # limit to top 50
+        serializer = UserProfileSerializer(users, many=True)
+        return Response(serializer.data)
+
+class AdminUserRolesView(APIView):
+    permission_classes = [IsAdminUser]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        roles = request.data.get('roles', [])
+        if not isinstance(roles, list):
+            return Response({'error': 'Roles must be a list'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Clear existing non-administrative groups (or just clear all managed groups)
+        # We only manage Uploader and Validator here for now.
+        managed_roles = ['Uploader', 'Validator']
+        for role_name in managed_roles:
+            group, _ = Group.objects.get_or_create(name=role_name)
+            if role_name in roles:
+                user.groups.add(group)
+            else:
+                user.groups.remove(group)
+                
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)

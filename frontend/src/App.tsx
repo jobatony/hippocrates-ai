@@ -11,6 +11,7 @@ import { QuizPage } from './pages/QuizPage';
 import { RoleRoute } from './components/RoleRoute';
 import { UploaderDashboard } from './pages/DataEntry/UploaderDashboard';
 import { ValidatorDashboard } from './pages/DataEntry/ValidatorDashboard';
+import { AdminDashboard } from './pages/DataEntry/AdminDashboard';
 
 import { LandingPage } from './pages/LandingPage';
 
@@ -73,6 +74,17 @@ function App() {
             <ProtectedRoute>
               <RoleRoute allowedRoles={['Validator']}>
                 <ValidatorDashboard />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/data-entry/admin"
+          element={
+            <ProtectedRoute>
+              <RoleRoute requireAdmin={true}>
+                <AdminDashboard />
               </RoleRoute>
             </ProtectedRoute>
           }

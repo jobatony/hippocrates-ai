@@ -69,7 +69,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'is_email_verified', 'created_at', 'groups']
+        fields = ['id', 'first_name', 'last_name', 'email', 'is_email_verified', 'created_at', 'groups', 'is_staff', 'is_superuser']
         read_only_fields = fields
 
     def get_groups(self, obj):

@@ -5,24 +5,22 @@ import { getAccessToken } from '../api';
 
 interface RoleRouteProps {
   children: React.ReactNode;
-  allowedRoles: string[];
+  allowedRoles?: string[];
+  requireAdmin?: boolean;
 }
 
 /**
- * Wraps routes that require a specific user role (e.g., 'Uploader', 'Validator').
+ * Wraps routes that require a specific user role (e.g., 'Uploader', 'Validator') or Admin access.
  */
-export const RoleRoute: React.FC<RoleRouteProps> = ({ children, allowedRoles }) => {
+export const RoleRoute: React.FC<RoleRouteProps> = ({ children, allowedRoles = [], requireAdmin = false }) => {
   const location = useLocation();
   const token = getAccessToken();
   const { currentUser } = useStore();
 
-  // If completely unauthenticated, redirect to login
   if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If token exists but currentUser hasn't been fetched yet (handled by ProtectedRoute),
-  // we might render nothing or a loading spinner until it's ready.
   if (!currentUser) {
     return (
       <div className="flex h-screen items-center justify-center bg-surface text-on-surface">
@@ -31,10 +29,14 @@ export const RoleRoute: React.FC<RoleRouteProps> = ({ children, allowedRoles }) 
     );
   }
 
-  const hasAccess = currentUser.groups?.some(group => allowedRoles.includes(group));
+  let hasAccess = false;
+  if (requireAdmin) {
+    hasAccess = currentUser.is_superuser || currentUser.is_staff;
+  } else {
+    hasAccess = currentUser.groups?.some(group => allowedRoles.includes(group)) || false;
+  }
 
   if (!hasAccess) {
-    // If authenticated but wrong role, redirect to dashboard
     return <Navigate to="/dashboard" replace />;
   }
 
