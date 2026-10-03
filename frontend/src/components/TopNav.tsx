@@ -36,12 +36,32 @@ export const TopNav: React.FC = () => {
     navigate('/');
   };
 
-  const navLinks = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Library',   path: '/library', onClick: () => setMode('read') },
-    { label: 'Quiz',      path: '/quiz' },
-  ];
+  const getNavLinks = () => {
+    if (location.pathname.startsWith('/data-entry')) {
+      const links = [];
+      if (currentUser?.is_superuser || currentUser?.is_staff) {
+        links.push({ label: 'Admin', path: '/data-entry/admin' });
+      }
+      if (currentUser?.groups?.includes('Uploader')) {
+        links.push({ label: 'Upload', path: '/data-entry/upload' });
+      }
+      if (currentUser?.groups?.includes('Validator')) {
+        links.push({ label: 'Validate', path: '/data-entry/validate' });
+      }
+      // Add a link to return to the main app
+      links.push({ label: 'Exit Portal', path: '/dashboard' });
+      return links;
+    }
 
+    return [
+      { label: 'Dashboard', path: '/dashboard' },
+      { label: 'Library',   path: '/library', onClick: () => setMode('read') },
+      { label: 'Quiz',      path: '/quiz' },
+    ];
+  };
+
+  const navLinks = getNavLinks();
+  
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.25)]">
       <div className="h-20 w-full px-4 md:px-spacing-xl flex items-center justify-between gap-2 md:gap-spacing-lg max-w-7xl mx-auto">
