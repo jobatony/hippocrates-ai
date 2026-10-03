@@ -3,6 +3,7 @@ import { TopNav } from '../../components/TopNav';
 import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, updatePastQuestion } from '../../api';
 import type { Exam, Subject, PastQuestion } from '../../api';
 import { QuestionEditor } from './QuestionEditor';
+import { QuestionViewer } from './QuestionViewer';
 
 export const UploaderDashboard: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -160,6 +161,8 @@ export const UploaderDashboard: React.FC = () => {
             <div className="h-full flex flex-col items-center justify-center text-on-surface-variant opacity-70">
               <p className="font-title-md">Select a question number to view or edit</p>
             </div>
+          ) : currentQuestion?.status === 'approved' ? (
+            <QuestionViewer question={currentQuestion} />
           ) : (
             <QuestionEditor 
               exam={selectedExam as number} 
