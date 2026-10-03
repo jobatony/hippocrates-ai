@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { PastQuestion } from '../../api';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2, Plus } from 'lucide-react';
 
 export interface QuestionPayload {
   exam: number;
@@ -50,7 +50,28 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   // Questions pending validation CAN be edited. Approved cannot be edited.
   const readOnly = existingQuestion?.status === 'approved';
 
+  const handleAddOption = () => {
+    const nextLetter = String.fromCharCode(65 + options.length);
+    setOptions([...options, { letter: nextLetter, text: '', is_correct: false }]);
+  };
+
+  const handleRemoveOption = (index: number) => {
+    const newOpts = [...options];
+    newOpts.splice(index, 1);
+    newOpts.forEach((opt, idx) => {
+      opt.letter = String.fromCharCode(65 + idx);
+    });
+    if (newOpts.length > 0 && !newOpts.some(o => o.is_correct)) {
+      newOpts[0].is_correct = true;
+    }
+    setOptions(newOpts);
+  };
+
   const handleSubmit = async () => {
+    if (options.length < 2) {
+      alert("A question must have at least 2 options.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       await onSubmit({
@@ -126,8 +147,27 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 setOptions(newOpts);
               }}
             />
+            {!readOnly && options.length > 2 && (
+              <button
+                onClick={() => handleRemoveOption(idx)}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
+                title="Remove Option"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
           </div>
         ))}
+
+        {!readOnly && options.length < 10 && (
+          <button
+            onClick={handleAddOption}
+            className="mt-2 flex items-center gap-2 text-primary font-title-sm hover:underline"
+          >
+            <Plus size={18} />
+            Add Option
+          </button>
+        )}
       </div>
 
       {!readOnly && (

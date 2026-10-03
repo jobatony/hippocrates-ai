@@ -90,11 +90,11 @@ export const ValidatorDashboard: React.FC = () => {
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   return (
-    <div className={`bg-surface min-h-screen text-on-surface flex flex-col ${isDragging ? 'select-none cursor-col-resize' : ''}`}>
+    <div className={`bg-surface h-screen overflow-hidden text-on-surface flex flex-col ${isDragging ? 'select-none cursor-col-resize' : ''}`}>
       <TopNav />
-      <div className="pt-20 flex-1 flex">
+      <div className="pt-20 flex-1 flex overflow-hidden">
         {/* Left Pane - Queue */}
-        <div style={{ width: `${leftWidth}%` }} className="border-r border-outline-variant p-6 flex flex-col gap-6">
+        <div style={{ width: `${leftWidth}%` }} className="border-r border-outline-variant p-6 flex flex-col gap-6 overflow-y-auto">
           <h1 className="font-display-sm">Validator Queue</h1>
           
           <div className="flex flex-col gap-4">
