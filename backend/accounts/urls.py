@@ -25,5 +25,5 @@ urlpatterns = [
     path('reset-password/',      ResetPasswordView.as_view(),      name='auth-reset-password'),
     path('me/',                  MeView.as_view(),                 name='auth-me'),
     path('admin/users/',         AdminUserManagementView.as_view(),name='admin-users-list'),
-    path('admin/users/<int:user_id>/roles/', AdminUserRolesView.as_view(), name='admin-users-roles'),
+    path('admin/users/<uuid:user_id>/roles/', AdminUserRolesView.as_view(), name='admin-users-roles'),
 ]
