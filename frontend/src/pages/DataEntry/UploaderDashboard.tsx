@@ -113,7 +113,27 @@ export const UploaderDashboard: React.FC = () => {
           </div>
 
           <div className="mt-4">
-            <h3 className="font-title-sm mb-4">Question Numbers</h3>
+            <h3 className="font-title-sm mb-2">Question Numbers</h3>
+            
+            <div className="flex flex-wrap gap-3 mb-4 font-body-sm">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm border bg-surface-variant border-outline-variant opacity-70"></div>
+                <span className="text-on-surface-variant">Missing</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm border bg-tertiary-container border-tertiary"></div>
+                <span className="text-on-surface-variant">Pending</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm border bg-error-container border-error"></div>
+                <span className="text-on-surface-variant">Changes Req.</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm border bg-secondary-container border-secondary"></div>
+                <span className="text-on-surface-variant">Approved</span>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               {possibleNumbers.map(num => (
                 <button
