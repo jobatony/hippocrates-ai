@@ -632,6 +632,19 @@ export async function fetchValidatorQuestions(exam?: number, subject?: number): 
   return res.json();
 }
 
+export async function updateValidatorQuestion(id: number, data: Partial<PastQuestion>): Promise<PastQuestion> {
+  const res = await authFetch(`${BASE_URL}/past-questions/validator/questions/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
+  return res.json();
+}
+
 export async function validatePastQuestion(id: number, action: 'approve' | 'request_changes', feedback?: string): Promise<{ status: string }> {
   const res = await authFetch(`${BASE_URL}/past-questions/validator/questions/${id}/validate/`, {
     method: 'POST',

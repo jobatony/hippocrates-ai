@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { TopNav } from '../../components/TopNav';
 import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, updatePastQuestion } from '../../api';
 import type { Exam, Subject, PastQuestion } from '../../api';
-import { Loader2 } from 'lucide-react';
+import { QuestionEditor } from './QuestionEditor';
 
 export const UploaderDashboard: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -147,7 +147,12 @@ export const UploaderDashboard: React.FC = () => {
               year={selectedYear} 
               number={selectedNumber} 
               existingQuestion={currentQuestion}
-              onSave={() => {
+              onSubmit={async (payload) => {
+                if (currentQuestion) {
+                  await updatePastQuestion(currentQuestion.id, payload);
+                } else {
+                  await uploadPastQuestion(payload);
+                }
                 fetchUploaderQuestions(selectedExam as number, selectedSubject as number, selectedYear).then(setQuestions);
                 setSelectedNumber(null);
               }}
@@ -155,129 +160,6 @@ export const UploaderDashboard: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
-
-const QuestionEditor: React.FC<{ 
-  exam: number, 
-  subject: number, 
-  year: number, 
-  number: number, 
-  existingQuestion?: PastQuestion,
-  onSave: () => void 
-}> = ({ exam, subject, year, number, existingQuestion, onSave }) => {
-  const [text, setText] = useState(existingQuestion?.question_text || '');
-  const [options, setOptions] = useState(existingQuestion?.options || [
-    { letter: 'A', text: '', is_correct: true },
-    { letter: 'B', text: '', is_correct: false },
-    { letter: 'C', text: '', is_correct: false },
-    { letter: 'D', text: '', is_correct: false },
-  ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Update local state when a new question is selected
-  useEffect(() => {
-    setText(existingQuestion?.question_text || '');
-    setOptions(existingQuestion?.options || [
-      { letter: 'A', text: '', is_correct: true },
-      { letter: 'B', text: '', is_correct: false },
-      { letter: 'C', text: '', is_correct: false },
-      { letter: 'D', text: '', is_correct: false },
-    ]);
-  }, [existingQuestion, number]);
-
-  const readOnly = existingQuestion?.status === 'pending' || existingQuestion?.status === 'approved';
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        exam, subject, year, number,
-        question_text: text,
-        options
-      };
-      if (existingQuestion) {
-        await updatePastQuestion(existingQuestion.id, payload);
-      } else {
-        await uploadPastQuestion(payload);
-      }
-      onSave();
-    } catch (e) {
-      alert("Failed to save: " + e);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-6">
-      <h2 className="font-display-sm">Question {number} ({year})</h2>
-      
-      {existingQuestion?.status === 'changes_requested' && (
-        <div className="bg-error-container text-on-error-container p-4 rounded-xl">
-          <strong className="font-bold">Validator Feedback:</strong>
-          <p>{existingQuestion.validator_feedback}</p>
-        </div>
-      )}
-
-      {existingQuestion?.status === 'pending' && (
-        <div className="bg-tertiary-container text-on-tertiary-container p-4 rounded-xl">
-          This question is pending validation and cannot be edited.
-        </div>
-      )}
-
-      <div>
-        <label className="font-label-md text-on-surface-variant">Question Text</label>
-        <textarea 
-          readOnly={readOnly}
-          className="w-full mt-2 bg-surface border border-outline-variant rounded-xl p-4 min-h-[150px]"
-          value={text} onChange={e => setText(e.target.value)}
-        />
-      </div>
-
-      <div>
-        <label className="font-label-md text-on-surface-variant mb-2 block">Options</label>
-        {options.map((opt, idx) => (
-          <div key={opt.letter} className="flex items-center gap-3 mb-3">
-            <input 
-              type="radio" 
-              name={`correct_option_${number}`} 
-              checked={opt.is_correct}
-              disabled={readOnly}
-              onChange={() => {
-                const newOpts = [...options];
-                newOpts.forEach(o => o.is_correct = false);
-                newOpts[idx].is_correct = true;
-                setOptions(newOpts);
-              }}
-              className="w-5 h-5 text-primary"
-            />
-            <span className="font-title-md w-6">{opt.letter}.</span>
-            <input 
-              type="text"
-              readOnly={readOnly}
-              className="flex-1 bg-surface border border-outline-variant rounded-lg p-3"
-              value={opt.text}
-              onChange={e => {
-                const newOpts = [...options];
-                newOpts[idx].text = e.target.value;
-                setOptions(newOpts);
-              }}
-            />
-          </div>
-        ))}
-      </div>
-
-      {!readOnly && (
-        <button 
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="mt-4 px-6 py-3 bg-primary text-on-primary rounded-xl font-title-md hover:brightness-110 flex items-center justify-center gap-2"
-        >
-          {isSubmitting ? <Loader2 className="animate-spin" /> : 'Save Question'}
-        </button>
-      )}
     </div>
   );
 };

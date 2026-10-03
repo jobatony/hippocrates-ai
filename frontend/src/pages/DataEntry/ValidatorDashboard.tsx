@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { TopNav } from '../../components/TopNav';
-import { fetchExams, fetchSubjects, fetchValidatorQuestions, validatePastQuestion } from '../../api';
+import { fetchExams, fetchSubjects, fetchValidatorQuestions, validatePastQuestion, updateValidatorQuestion } from '../../api';
 import type { Exam, Subject, PastQuestion } from '../../api';
 import { Loader2 } from 'lucide-react';
+import { QuestionEditor } from './QuestionEditor';
 
 export const ValidatorDashboard: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -149,26 +150,19 @@ export const ValidatorDashboard: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col gap-8 max-w-3xl mx-auto">
-              <div>
-                <h2 className="font-display-sm mb-2">{selectedQuestion.exam_name} {selectedQuestion.year} - {selectedQuestion.subject_name}</h2>
-                <h3 className="font-title-lg text-primary">Question {selectedQuestion.number}</h3>
-              </div>
-              
-              <div className="p-6 bg-surface border border-outline-variant rounded-2xl shadow-sm text-lg whitespace-pre-wrap">
-                {selectedQuestion.question_text}
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {selectedQuestion.options.map(opt => (
-                  <div key={opt.letter} className={`p-4 rounded-xl border flex items-center gap-4 ${opt.is_correct ? 'bg-secondary-container/30 border-secondary' : 'bg-surface border-outline-variant'}`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${opt.is_correct ? 'bg-secondary text-on-secondary' : 'bg-surface-variant text-on-surface-variant'}`}>
-                      {opt.letter}
-                    </div>
-                    <span className="font-body-lg flex-1">{opt.text}</span>
-                    {opt.is_correct && <span className="text-secondary font-bold text-sm uppercase tracking-wider">Correct Answer</span>}
-                  </div>
-                ))}
-              </div>
+              <QuestionEditor 
+                exam={selectedQuestion.exam} 
+                subject={selectedQuestion.subject} 
+                year={selectedQuestion.year} 
+                number={selectedQuestion.number} 
+                existingQuestion={selectedQuestion}
+                isValidatorMode={true}
+                onSubmit={async (payload) => {
+                  const updated = await updateValidatorQuestion(selectedQuestion.id, payload);
+                  setSelectedQuestion(updated);
+                  refreshQueue(); // also update the item in the list
+                }}
+              />
 
               <div className="mt-8 border-t border-outline-variant pt-8">
                 <h3 className="font-title-lg mb-4">Validation Actions</h3>
