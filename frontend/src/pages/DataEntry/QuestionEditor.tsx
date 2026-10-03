@@ -19,11 +19,12 @@ interface QuestionEditorProps {
   number: number;
   existingQuestion?: PastQuestion;
   onSubmit: (payload: QuestionPayload) => Promise<void>;
+  onCancel?: () => void;
   isValidatorMode?: boolean;
 }
 
 export const QuestionEditor: React.FC<QuestionEditorProps> = ({ 
-  exam, subject, year, number, existingQuestion, onSubmit, isValidatorMode = false 
+  exam, subject, year, number, existingQuestion, onSubmit, onCancel, isValidatorMode = false 
 }) => {
   const [text, setText] = useState(existingQuestion?.question_text || '');
   const [hasDiagram, setHasDiagram] = useState(existingQuestion?.has_diagram || false);
@@ -130,13 +131,24 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       </div>
 
       {!readOnly && (
-        <button 
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="mt-4 px-6 py-3 bg-primary text-on-primary rounded-xl font-title-md hover:brightness-110 flex items-center justify-center gap-2"
-        >
-          {isSubmitting ? <Loader2 className="animate-spin" /> : 'Save Question'}
-        </button>
+        <div className="mt-4 flex gap-4">
+          <button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-1 px-6 py-3 bg-primary text-on-primary rounded-xl font-title-md hover:brightness-110 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? <Loader2 className="animate-spin" /> : 'Save Question'}
+          </button>
+          {onCancel && (
+            <button 
+              onClick={onCancel}
+              disabled={isSubmitting}
+              className="px-6 py-3 bg-surface-variant text-on-surface-variant rounded-xl font-title-md hover:brightness-95 flex items-center justify-center"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

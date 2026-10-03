@@ -46,7 +46,7 @@ export const UploaderDashboard: React.FC = () => {
 
   const currentQuestion = questions.find(q => q.number === selectedNumber);
 
-  const [leftWidth, setLeftWidth] = useState(50);
+  const [leftWidth, setLeftWidth] = useState(30);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleMouseMove = React.useCallback((e: MouseEvent) => {

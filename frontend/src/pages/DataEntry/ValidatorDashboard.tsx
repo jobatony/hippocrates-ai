@@ -60,8 +60,9 @@ export const ValidatorDashboard: React.FC = () => {
     }
   };
 
-  const [leftWidth, setLeftWidth] = useState(33.33);
+  const [leftWidth, setLeftWidth] = useState(30);
   const [isDragging, setIsDragging] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleMouseMove = React.useCallback((e: MouseEvent) => {
     if (!isDragging) return;
@@ -122,7 +123,7 @@ export const ValidatorDashboard: React.FC = () => {
               {questions.map(q => (
                 <button
                   key={q.id}
-                  onClick={() => { setSelectedQuestion(q); setFeedback(''); }}
+                  onClick={() => { setSelectedQuestion(q); setFeedback(''); setIsEditing(false); }}
                   className={`p-4 rounded-xl text-left transition-all border ${selectedQuestion?.id === q.id ? 'bg-primary-container text-on-primary-container border-primary' : 'bg-surface-container border-outline-variant hover:border-primary/50'}`}
                 >
                   <div className="font-title-md">{q.year} - Question {q.number}</div>
@@ -150,50 +151,94 @@ export const ValidatorDashboard: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col gap-8 max-w-3xl mx-auto">
-              <QuestionEditor 
-                exam={selectedQuestion.exam} 
-                subject={selectedQuestion.subject} 
-                year={selectedQuestion.year} 
-                number={selectedQuestion.number} 
-                existingQuestion={selectedQuestion}
-                isValidatorMode={true}
-                onSubmit={async (payload) => {
-                  const updated = await updateValidatorQuestion(selectedQuestion.id, payload);
-                  setSelectedQuestion(updated);
-                  refreshQueue(); // also update the item in the list
-                }}
-              />
-
-              <div className="mt-8 border-t border-outline-variant pt-8">
-                <h3 className="font-title-lg mb-4">Validation Actions</h3>
-                
-                <div className="flex flex-col gap-4">
-                  <textarea 
-                    className="w-full bg-surface border border-outline-variant rounded-xl p-4 min-h-[100px]"
-                    placeholder="Feedback (required if requesting changes)"
-                    value={feedback}
-                    onChange={e => setFeedback(e.target.value)}
-                  />
-                  
-                  <div className="flex gap-4">
+              {!isEditing ? (
+                <>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="font-display-sm mb-2">{selectedQuestion.exam_name} {selectedQuestion.year} - {selectedQuestion.subject_name}</h2>
+                      <h3 className="font-title-lg text-primary">Question {selectedQuestion.number}</h3>
+                    </div>
                     <button 
-                      onClick={() => handleValidate('approve')}
-                      disabled={isSubmitting}
-                      className="flex-1 py-4 bg-secondary text-on-secondary rounded-xl font-title-lg hover:brightness-110 flex items-center justify-center gap-2"
+                      onClick={() => setIsEditing(true)}
+                      className="px-4 py-2 border border-outline-variant hover:bg-surface-variant rounded-lg font-title-sm transition-colors"
                     >
-                      {isSubmitting ? <Loader2 className="animate-spin" /> : 'Approve Question'}
-                    </button>
-                    
-                    <button 
-                      onClick={() => handleValidate('request_changes')}
-                      disabled={isSubmitting || !feedback.trim()}
-                      className="flex-1 py-4 bg-error text-on-error rounded-xl font-title-lg hover:brightness-110 flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {isSubmitting ? <Loader2 className="animate-spin" /> : 'Request Changes'}
+                      Edit Question
                     </button>
                   </div>
+                  
+                  <div className="p-6 bg-surface border border-outline-variant rounded-2xl shadow-sm text-lg whitespace-pre-wrap">
+                    {selectedQuestion.question_text}
+                  </div>
+
+                  {selectedQuestion.has_diagram && (
+                    <div className="text-primary font-title-sm flex items-center gap-2">
+                      <span className="w-2 h-2 bg-primary rounded-full"></span>
+                      This question has an image / diagram
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3">
+                    {selectedQuestion.options.map(opt => (
+                      <div key={opt.letter} className={`p-4 rounded-xl border flex items-center gap-4 ${opt.is_correct ? 'bg-secondary-container/30 border-secondary' : 'bg-surface border-outline-variant'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${opt.is_correct ? 'bg-secondary text-on-secondary' : 'bg-surface-variant text-on-surface-variant'}`}>
+                          {opt.letter}
+                        </div>
+                        <span className="font-body-lg flex-1">{opt.text}</span>
+                        {opt.is_correct && <span className="text-secondary font-bold text-sm uppercase tracking-wider">Correct Answer</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <QuestionEditor 
+                  exam={selectedQuestion.exam} 
+                  subject={selectedQuestion.subject} 
+                  year={selectedQuestion.year} 
+                  number={selectedQuestion.number} 
+                  existingQuestion={selectedQuestion}
+                  isValidatorMode={true}
+                  onCancel={() => setIsEditing(false)}
+                  onSubmit={async (payload) => {
+                    const updated = await updateValidatorQuestion(selectedQuestion.id, payload);
+                    setSelectedQuestion(updated);
+                    setIsEditing(false);
+                    refreshQueue(); // also update the item in the list
+                  }}
+                />
+              )}
+
+              {!isEditing && (
+                <div className="mt-8 border-t border-outline-variant pt-8">
+                  <h3 className="font-title-lg mb-4">Validation Actions</h3>
+                  
+                  <div className="flex flex-col gap-4">
+                    <textarea 
+                      className="w-full bg-surface border border-outline-variant rounded-xl p-4 min-h-[100px]"
+                      placeholder="Feedback (required if requesting changes)"
+                      value={feedback}
+                      onChange={e => setFeedback(e.target.value)}
+                    />
+                    
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => handleValidate('approve')}
+                        disabled={isSubmitting}
+                        className="flex-1 py-4 bg-secondary text-on-secondary rounded-xl font-title-lg hover:brightness-110 flex items-center justify-center gap-2"
+                      >
+                        {isSubmitting ? <Loader2 className="animate-spin" /> : 'Approve Question'}
+                      </button>
+                      
+                      <button 
+                        onClick={() => handleValidate('request_changes')}
+                        disabled={isSubmitting || !feedback.trim()}
+                        className="flex-1 py-4 bg-error text-on-error rounded-xl font-title-lg hover:brightness-110 flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {isSubmitting ? <Loader2 className="animate-spin" /> : 'Request Changes'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
