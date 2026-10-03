@@ -59,12 +59,39 @@ export const ValidatorDashboard: React.FC = () => {
     }
   };
 
+  const [leftWidth, setLeftWidth] = useState(33.33);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    const newWidth = (e.clientX / window.innerWidth) * 100;
+    if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth);
+  }, [isDragging]);
+
+  const handleMouseUp = React.useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   return (
-    <div className="bg-surface min-h-screen text-on-surface flex flex-col">
+    <div className={`bg-surface min-h-screen text-on-surface flex flex-col ${isDragging ? 'select-none cursor-col-resize' : ''}`}>
       <TopNav />
       <div className="pt-20 flex-1 flex">
         {/* Left Pane - Queue */}
-        <div className="w-1/3 border-r border-outline-variant p-6 flex flex-col gap-6">
+        <div style={{ width: `${leftWidth}%` }} className="border-r border-outline-variant p-6 flex flex-col gap-6">
           <h1 className="font-display-sm">Validator Queue</h1>
           
           <div className="flex flex-col gap-4">
@@ -108,8 +135,14 @@ export const ValidatorDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Resizer */}
+        <div 
+          className="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary bg-outline-variant/50 transition-colors z-10"
+          onMouseDown={() => setIsDragging(true)}
+        />
+
         {/* Right Pane - Validation */}
-        <div className="w-2/3 p-6 overflow-y-auto bg-surface-container-lowest">
+        <div style={{ width: `calc(${100 - leftWidth}% - 4px)` }} className="p-6 overflow-y-auto bg-surface-container-lowest">
           {!selectedQuestion ? (
             <div className="h-full flex flex-col items-center justify-center text-on-surface-variant opacity-70">
               <p className="font-title-md">Select a pending question from the queue</p>
