@@ -595,6 +595,7 @@ export async function fetchUploaderQuestions(exam?: number, subject?: number, ye
 export async function uploadPastQuestion(data: Partial<PastQuestion>): Promise<PastQuestion> {
   const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -607,6 +608,7 @@ export async function uploadPastQuestion(data: Partial<PastQuestion>): Promise<P
 export async function updatePastQuestion(id: number, data: Partial<PastQuestion>): Promise<PastQuestion> {
   const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/${id}/`, {
     method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -633,6 +635,7 @@ export async function fetchValidatorQuestions(exam?: number, subject?: number): 
 export async function validatePastQuestion(id: number, action: 'approve' | 'request_changes', feedback?: string): Promise<{ status: string }> {
   const res = await authFetch(`${BASE_URL}/past-questions/validator/questions/${id}/validate/`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, feedback }),
   });
   if (!res.ok) {
@@ -647,6 +650,7 @@ export async function validatePastQuestion(id: number, action: 'approve' | 'requ
 export async function createExam(name: string): Promise<Exam> {
   const res = await authFetch(`${BASE_URL}/past-questions/exams/`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
   });
   if (!res.ok) throw new Error('Failed to create exam');
@@ -663,6 +667,7 @@ export async function deleteExam(id: number): Promise<void> {
 export async function createSubject(name: string): Promise<Subject> {
   const res = await authFetch(`${BASE_URL}/past-questions/subjects/`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
   });
   if (!res.ok) throw new Error('Failed to create subject');
@@ -685,6 +690,7 @@ export async function fetchAdminUsers(search: string = ''): Promise<AuthUser[]> 
 export async function updateUserRoles(userId: string, roles: string[]): Promise<AuthUser> {
   const res = await authFetch(`${BASE_URL}/auth/admin/users/${userId}/roles/`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ roles }),
   });
   if (!res.ok) throw new Error('Failed to update roles');

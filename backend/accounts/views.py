@@ -245,11 +245,15 @@ class MeView(APIView):
         return Response(serializer.data)
 
 from django.contrib.auth.models import Group
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import BasePermission
+
+class IsSuperUserOrStaff(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser))
 
 class AdminUserManagementView(APIView):
     """GET /api/auth/admin/users/ (list users with search), POST /api/auth/admin/users/<id>/roles/ (assign roles)"""
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsSuperUserOrStaff]
 
     def get(self, request):
         search_query = request.query_params.get('search', '')
@@ -261,7 +265,7 @@ class AdminUserManagementView(APIView):
         return Response(serializer.data)
 
 class AdminUserRolesView(APIView):
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsSuperUserOrStaff]
     
     def post(self, request, user_id):
         try:

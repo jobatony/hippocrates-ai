@@ -12,6 +12,7 @@ import { RoleRoute } from './components/RoleRoute';
 import { UploaderDashboard } from './pages/DataEntry/UploaderDashboard';
 import { ValidatorDashboard } from './pages/DataEntry/ValidatorDashboard';
 import { AdminDashboard } from './pages/DataEntry/AdminDashboard';
+import { DataEntryLanding } from './pages/DataEntry/DataEntryLanding';
 
 import { LandingPage } from './pages/LandingPage';
 
@@ -53,6 +54,15 @@ function App() {
           element={
             <ProtectedRoute>
               <QuizPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/data-entry"
+          element={
+            <ProtectedRoute>
+              <DataEntryLanding />
             </ProtectedRoute>
           }
         />
