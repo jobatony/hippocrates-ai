@@ -4,6 +4,7 @@ import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, 
 import type { Exam, Subject, PastQuestion } from '../../api';
 import { QuestionEditor } from './QuestionEditor';
 import { QuestionViewer } from './QuestionViewer';
+import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const UploaderDashboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'upload' | 'list'>('upload');
@@ -73,6 +74,22 @@ export const UploaderDashboard: React.FC = () => {
 
   const [leftWidth, setLeftWidth] = useState(30);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (selectedNumber || selectedListNumber) {
+      setIsMobileSidebarOpen(false);
+    } else {
+      setIsMobileSidebarOpen(true);
+    }
+  }, [selectedNumber, selectedListNumber]);
 
   const handleMouseMove = React.useCallback((e: MouseEvent) => {
     if (!isDragging) return;
@@ -103,7 +120,10 @@ export const UploaderDashboard: React.FC = () => {
       <TopNav />
       <div className="pt-20 flex-1 flex overflow-hidden">
         {/* Left Pane - Explorer */}
-        <div style={{ width: `${leftWidth}%` }} className="border-r border-outline-variant p-6 flex flex-col gap-6 overflow-y-auto">
+        <div 
+          style={{ width: isMobile ? '100%' : `${leftWidth}%` }} 
+          className={`${isMobileSidebarOpen ? 'flex' : 'hidden md:flex'} border-r border-outline-variant p-6 flex-col gap-6 overflow-y-auto shrink-0`}
+        >
           <h1 className="font-display-sm">Uploader Dashboard</h1>
           
           <div className="flex bg-surface-container border border-outline-variant rounded-lg p-1">
@@ -220,45 +240,105 @@ export const UploaderDashboard: React.FC = () => {
 
         {/* Resizer */}
         <div 
-          className="w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary bg-outline-variant/50 transition-colors z-10"
+          className="hidden md:block w-1 cursor-col-resize hover:bg-primary/50 active:bg-primary bg-outline-variant/50 transition-colors z-10"
           onMouseDown={() => setIsDragging(true)}
         />
 
         {/* Right Pane - Details & Form */}
-        <div style={{ width: `calc(${100 - leftWidth}% - 4px)` }} className="p-6 overflow-y-auto bg-surface-container-lowest">
-          {viewMode === 'upload' ? (
-            !selectedNumber ? (
-              <div className="h-full flex flex-col items-center justify-center text-on-surface-variant opacity-70">
-                <p className="font-title-md">Select a question number to view or edit</p>
-              </div>
-            ) : currentQuestion?.status === 'approved' ? (
-              <QuestionViewer question={currentQuestion} />
+        <div 
+          style={{ width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 4px)` }} 
+          className={`${!isMobileSidebarOpen ? 'flex' : 'hidden md:flex'} p-6 overflow-y-auto bg-surface-container-lowest flex-col relative`}
+        >
+          {/* Mobile Header */}
+          <div className="md:hidden flex items-center mb-6 shrink-0">
+            <button 
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-2 -ml-2 rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-2"
+            >
+              <Menu size={24} />
+              <span className="font-title-sm">Back to Dashboard</span>
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col">
+            {viewMode === 'upload' ? (
+              !selectedNumber ? (
+                <div className="h-full flex flex-col items-center justify-center text-on-surface-variant opacity-70">
+                  <p className="font-title-md">Select a question number to view or edit</p>
+                </div>
+              ) : currentQuestion?.status === 'approved' ? (
+                <QuestionViewer question={currentQuestion} />
+              ) : (
+                <QuestionEditor 
+                  exam={selectedExam as number} 
+                  subject={selectedSubject as number} 
+                  year={selectedYear} 
+                  number={selectedNumber} 
+                  existingQuestion={currentQuestion}
+                  onSubmit={async (payload) => {
+                    if (currentQuestion) {
+                      await updatePastQuestion(currentQuestion.id, payload);
+                    } else {
+                      await uploadPastQuestion(payload);
+                    }
+                    fetchUploaderQuestions(selectedExam as number, selectedSubject as number, selectedYear).then(setQuestions);
+                  }}
+                />
+              )
             ) : (
-              <QuestionEditor 
-                exam={selectedExam as number} 
-                subject={selectedSubject as number} 
-                year={selectedYear} 
-                number={selectedNumber} 
-                existingQuestion={currentQuestion}
-                onSubmit={async (payload) => {
-                  if (currentQuestion) {
-                    await updatePastQuestion(currentQuestion.id, payload);
-                  } else {
-                    await uploadPastQuestion(payload);
+              !selectedListNumber ? (
+                <div className="h-full flex flex-col items-center justify-center text-on-surface-variant opacity-70">
+                  <p className="font-title-md">Select an existing question from the list to view</p>
+                </div>
+              ) : listQuestions.find(q => q.number === selectedListNumber) ? (
+                <QuestionViewer question={listQuestions.find(q => q.number === selectedListNumber)!} />
+              ) : null
+            )}
+          </div>
+
+          {/* Bottom Navigation */}
+          {((viewMode === 'upload' && selectedNumber) || (viewMode === 'list' && selectedListNumber)) && (
+            <div className="mt-8 border-t border-outline-variant pt-6 flex items-center justify-between shrink-0">
+              <button 
+                disabled={
+                  viewMode === 'upload' 
+                    ? !selectedNumber || selectedNumber <= 1 
+                    : !selectedListNumber || listQuestions.findIndex(q => q.number === selectedListNumber) <= 0
+                }
+                onClick={() => {
+                  if (viewMode === 'upload' && selectedNumber) {
+                    setSelectedNumber(selectedNumber - 1);
+                  } else if (viewMode === 'list' && selectedListNumber) {
+                    const idx = listQuestions.findIndex(q => q.number === selectedListNumber);
+                    if (idx > 0) setSelectedListNumber(listQuestions[idx - 1].number);
                   }
-                  fetchUploaderQuestions(selectedExam as number, selectedSubject as number, selectedYear).then(setQuestions);
-                  setSelectedNumber(null);
                 }}
-              />
-            )
-          ) : (
-            !selectedListNumber ? (
-              <div className="h-full flex flex-col items-center justify-center text-on-surface-variant opacity-70">
-                <p className="font-title-md">Select an existing question from the list to view</p>
-              </div>
-            ) : listQuestions.find(q => q.number === selectedListNumber) ? (
-              <QuestionViewer question={listQuestions.find(q => q.number === selectedListNumber)!} />
-            ) : null
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-title-sm bg-surface-container hover:bg-surface-variant text-on-surface transition-colors disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <ChevronLeft size={20} />
+                Previous
+              </button>
+              
+              <button 
+                disabled={
+                  viewMode === 'upload' 
+                    ? !selectedNumber || selectedNumber >= 60 
+                    : !selectedListNumber || listQuestions.findIndex(q => q.number === selectedListNumber) >= listQuestions.length - 1
+                }
+                onClick={() => {
+                  if (viewMode === 'upload' && selectedNumber) {
+                    setSelectedNumber(selectedNumber + 1);
+                  } else if (viewMode === 'list' && selectedListNumber) {
+                    const idx = listQuestions.findIndex(q => q.number === selectedListNumber);
+                    if (idx < listQuestions.length - 1) setSelectedListNumber(listQuestions[idx + 1].number);
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-title-sm bg-surface-container hover:bg-surface-variant text-on-surface transition-colors disabled:opacity-50 disabled:pointer-events-none"
+              >
+                Next
+                <ChevronRight size={20} />
+              </button>
+            </div>
           )}
         </div>
       </div>
