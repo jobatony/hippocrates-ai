@@ -577,6 +577,16 @@ export async function fetchSubjects(): Promise<Subject[]> {
   return res.json();
 }
 
+export async function fetchAvailableYears(exam: number, subject: number): Promise<number[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/list/available_years/?exam=${exam}&subject=${subject}`);
+  return res.json();
+}
+
+export async function fetchQuestionList(exam: number, subject: number, year: number): Promise<PastQuestion[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/list/?exam=${exam}&subject=${subject}&year=${year}`);
+  return res.json();
+}
+
 export async function fetchUploaderQuestions(exam?: number, subject?: number, year?: number): Promise<PastQuestion[]> {
   let url = `${BASE_URL}/past-questions/uploader/questions/`;
   const params = new URLSearchParams();

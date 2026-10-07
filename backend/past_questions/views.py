@@ -93,3 +93,34 @@ class ValidatorQuestionViewSet(viewsets.ModelViewSet):
             return Response({'status': 'changes_requested'})
             
         return Response({'error': 'Invalid action.'}, status=status.HTTP_400_BAD_REQUEST)
+
+class QuestionListViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PastQuestionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = PastQuestion.objects.all()
+        
+        exam = self.request.query_params.get('exam')
+        subject = self.request.query_params.get('subject')
+        year = self.request.query_params.get('year')
+        
+        if exam:
+            queryset = queryset.filter(exam_id=exam)
+        if subject:
+            queryset = queryset.filter(subject_id=subject)
+        if year:
+            queryset = queryset.filter(year=year)
+            
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def available_years(self, request):
+        exam = request.query_params.get('exam')
+        subject = request.query_params.get('subject')
+        
+        if not exam or not subject:
+            return Response({'error': 'Exam and subject are required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        years = PastQuestion.objects.filter(exam_id=exam, subject_id=subject).values_list('year', flat=True).distinct().order_by('-year')
+        return Response(list(years))
