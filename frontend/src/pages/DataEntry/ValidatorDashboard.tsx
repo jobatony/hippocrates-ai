@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { TopNav } from '../../components/TopNav';
 import { fetchExams, fetchSubjects, fetchValidatorQuestions, validatePastQuestion, updateValidatorQuestion, fetchAvailableYears, fetchQuestionList } from '../../api';
 import type { Exam, Subject, PastQuestion } from '../../api';
-import { Loader2, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Menu, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { QuestionEditor } from './QuestionEditor';
 import { QuestionViewer } from './QuestionViewer';
 
@@ -136,13 +136,34 @@ export const ValidatorDashboard: React.FC = () => {
   return (
     <div className={`bg-surface h-screen overflow-hidden text-on-surface flex flex-col ${isDragging ? 'select-none cursor-col-resize' : ''}`}>
       <TopNav />
-      <div className="pt-20 flex-1 flex overflow-hidden">
+      <div className="pt-20 flex-1 flex overflow-hidden relative">
+        {/* Mobile Backdrop */}
+        {isMobile && isMobileSidebarOpen && (
+          <div 
+            className="fixed inset-0 top-20 bg-black/40 z-40 md:hidden"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+
         {/* Left Pane - Queue */}
         <div 
-          style={{ width: isMobile ? '100%' : `${leftWidth}%` }} 
-          className={`${isMobileSidebarOpen ? 'flex' : 'hidden md:flex'} border-r border-outline-variant p-6 flex-col gap-6 overflow-y-auto shrink-0`}
+          style={{ width: isMobile ? '300px' : `${leftWidth}%` }} 
+          className={`
+            ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            fixed md:relative top-20 md:top-0 bottom-0 left-0 z-50 md:z-0
+            bg-surface-container-low md:bg-surface
+            transition-transform duration-300
+            border-r border-outline-variant p-6 flex flex-col gap-6 overflow-y-auto shrink-0
+          `}
         >
-          <h1 className="font-display-sm">Validator Dashboard</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-display-sm">Validator Dashboard</h1>
+            {isMobile && (
+              <button onClick={() => setIsMobileSidebarOpen(false)} className="p-2 -mr-2 rounded-lg hover:bg-surface-variant transition-colors text-on-surface-variant md:hidden">
+                <X size={24} />
+              </button>
+            )}
+          </div>
 
           <div className="flex bg-surface-container border border-outline-variant rounded-lg p-1">
             <button 
@@ -248,7 +269,7 @@ export const ValidatorDashboard: React.FC = () => {
         {/* Right Pane - Validation */}
         <div 
           style={{ width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 4px)` }} 
-          className={`${!isMobileSidebarOpen ? 'flex' : 'hidden md:flex'} p-6 overflow-y-auto bg-surface-container-lowest flex-col relative`}
+          className="flex flex-1 md:flex-none p-6 overflow-y-auto bg-surface-container-lowest flex-col relative"
         >
           {/* Mobile Header */}
           <div className="md:hidden flex items-center mb-6 shrink-0">

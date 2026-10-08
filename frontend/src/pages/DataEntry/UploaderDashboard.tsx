@@ -4,7 +4,7 @@ import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, 
 import type { Exam, Subject, PastQuestion } from '../../api';
 import { QuestionEditor } from './QuestionEditor';
 import { QuestionViewer } from './QuestionViewer';
-import { Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 export const UploaderDashboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'upload' | 'list'>('upload');
@@ -118,13 +118,34 @@ export const UploaderDashboard: React.FC = () => {
   return (
     <div className={`bg-surface h-screen overflow-hidden text-on-surface flex flex-col ${isDragging ? 'select-none cursor-col-resize' : ''}`}>
       <TopNav />
-      <div className="pt-20 flex-1 flex overflow-hidden">
+      <div className="pt-20 flex-1 flex overflow-hidden relative">
+        {/* Mobile Backdrop */}
+        {isMobile && isMobileSidebarOpen && (
+          <div 
+            className="fixed inset-0 top-20 bg-black/40 z-40 md:hidden"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+
         {/* Left Pane - Explorer */}
         <div 
-          style={{ width: isMobile ? '100%' : `${leftWidth}%` }} 
-          className={`${isMobileSidebarOpen ? 'flex' : 'hidden md:flex'} border-r border-outline-variant p-6 flex-col gap-6 overflow-y-auto shrink-0`}
+          style={{ width: isMobile ? '300px' : `${leftWidth}%` }} 
+          className={`
+            ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            fixed md:relative top-20 md:top-0 bottom-0 left-0 z-50 md:z-0
+            bg-surface-container-low md:bg-surface
+            transition-transform duration-300
+            border-r border-outline-variant p-6 flex flex-col gap-6 overflow-y-auto shrink-0
+          `}
         >
-          <h1 className="font-display-sm">Uploader Dashboard</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-display-sm">Uploader Dashboard</h1>
+            {isMobile && (
+              <button onClick={() => setIsMobileSidebarOpen(false)} className="p-2 -mr-2 rounded-lg hover:bg-surface-variant transition-colors text-on-surface-variant md:hidden">
+                <X size={24} />
+              </button>
+            )}
+          </div>
           
           <div className="flex bg-surface-container border border-outline-variant rounded-lg p-1">
             <button 
@@ -247,7 +268,7 @@ export const UploaderDashboard: React.FC = () => {
         {/* Right Pane - Details & Form */}
         <div 
           style={{ width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 4px)` }} 
-          className={`${!isMobileSidebarOpen ? 'flex' : 'hidden md:flex'} p-6 overflow-y-auto bg-surface-container-lowest flex-col relative`}
+          className="flex flex-1 md:flex-none p-6 overflow-y-auto bg-surface-container-lowest flex-col relative"
         >
           {/* Mobile Header */}
           <div className="md:hidden flex items-center mb-6 shrink-0">
