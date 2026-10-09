@@ -67,5 +67,11 @@ class ResetPasswordSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
-        fields = ['id', 'first_name', 'last_name', 'email', 'is_email_verified', 'created_at']
+        fields = ['id', 'first_name', 'last_name', 'email', 'is_email_verified', 'created_at', 'daily_goal', 'quiz_ratio']
         read_only_fields = fields
+
+
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['quiz_ratio', 'daily_goal']

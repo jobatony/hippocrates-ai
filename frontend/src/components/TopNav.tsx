@@ -1,14 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings, ChevronLeft, Loader2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { SearchBar } from './SearchBar';
+import { updateUserSettings } from '../api';
 
 export const TopNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, setMode, logout } = useStore();
+  const { currentUser, setCurrentUser, setMode, logout } = useStore();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [quizRatio, setQuizRatio] = useState(currentUser?.quiz_ratio || 4);
+  const [savingSettings, setSavingSettings] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Clear any lingering text selection whenever the route changes.
@@ -24,11 +28,25 @@ export const TopNav: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsProfileMenuOpen(false);
+        setIsSettingsOpen(false); // reset on close
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const updatedUser = await updateUserSettings({ quiz_ratio: quizRatio });
+      setCurrentUser(updatedUser);
+      setIsSettingsOpen(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleLogout = () => {
     setIsProfileMenuOpen(false);
@@ -105,24 +123,69 @@ export const TopNav: React.FC = () => {
 
             {/* Profile Dropdown */}
             {isProfileMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-surface-container rounded-xl shadow-lg border border-outline-variant overflow-hidden z-50">
-                <div className="px-4 py-3 border-b border-outline-variant">
-                  <p className="text-body-md font-bold text-on-surface truncate">
-                    {currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
-                  </p>
-                  <p className="text-body-sm text-on-surface-variant truncate">
-                    {currentUser?.email || ''}
-                  </p>
-                </div>
-                <div className="p-2">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-error hover:bg-error-container hover:text-on-error-container rounded-lg transition-colors text-left"
-                  >
-                    <LogOut size={18} />
-                    <span className="font-title-sm">Log out</span>
-                  </button>
-                </div>
+              <div className="absolute right-0 top-full mt-2 w-64 bg-surface-container rounded-xl shadow-lg border border-outline-variant overflow-hidden z-50">
+                {isSettingsOpen ? (
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-4 text-on-surface">
+                      <button onClick={() => setIsSettingsOpen(false)} className="hover:bg-surface-variant p-1 rounded">
+                        <ChevronLeft size={18} />
+                      </button>
+                      <span className="font-title-md">Settings</span>
+                    </div>
+                    
+                    <label className="block text-label-sm text-on-surface-variant mb-2">
+                      Review Cards per New Card
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <input 
+                        type="range" 
+                        min="1" max="6" 
+                        value={quizRatio} 
+                        onChange={e => setQuizRatio(Number(e.target.value))} 
+                        className="flex-1 accent-primary" 
+                      />
+                      <span className="font-title-lg text-primary">{quizRatio}</span>
+                    </div>
+                    <p className="text-body-sm text-on-surface-variant mt-2 mb-4">
+                      Ratio: 1 New to {quizRatio} Review{quizRatio > 1 ? 's' : ''}
+                    </p>
+                
+                    <button 
+                      onClick={handleSaveSettings} 
+                      disabled={savingSettings}
+                      className="w-full bg-primary text-on-primary py-2 rounded-lg font-title-sm flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50"
+                    >
+                      {savingSettings ? <Loader2 size={16} className="animate-spin" /> : 'Save Changes'}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="px-4 py-3 border-b border-outline-variant">
+                      <p className="text-body-md font-bold text-on-surface truncate">
+                        {currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
+                      </p>
+                      <p className="text-body-sm text-on-surface-variant truncate">
+                        {currentUser?.email || ''}
+                      </p>
+                    </div>
+                    <div className="p-2 flex flex-col gap-1">
+                      <button
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-on-surface hover:bg-surface-variant rounded-lg transition-colors text-left"
+                      >
+                        <Settings size={18} />
+                        <span className="font-title-sm">Settings</span>
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-error hover:bg-error-container hover:text-on-error-container rounded-lg transition-colors text-left"
+                      >
+                        <LogOut size={18} />
+                        <span className="font-title-sm">Log out</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -12,6 +12,7 @@ import { X, BadgeCheck, Loader2, FileText } from 'lucide-react';
 export const QuizPage: React.FC = () => {
   const navigate = useNavigate();
   const { 
+    currentUser,
     quizSession, 
     setQuizSession, 
     updateQuizSession,
@@ -139,8 +140,7 @@ export const QuizPage: React.FC = () => {
         let selectedIdx = -1;
 
         if (dueReviews.length > 0 && readyNew.length > 0) {
-          const currentHour = new Date(now).getHours();
-          const targetReviews = currentHour >= 21 ? 4 : 2;
+          const targetReviews = currentUser?.quiz_ratio ?? 4;
 
           if (consecutiveReviewsRef.current >= targetReviews) {
             selectedIdx = readyNew[0].idx;

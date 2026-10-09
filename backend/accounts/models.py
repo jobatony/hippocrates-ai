@@ -17,6 +17,7 @@ class User(AbstractUser):
     is_email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     daily_goal = models.PositiveSmallIntegerField(default=50)
+    quiz_ratio = models.PositiveSmallIntegerField(default=4)
 
     # Use email as the login field instead of username
     USERNAME_FIELD = 'email'

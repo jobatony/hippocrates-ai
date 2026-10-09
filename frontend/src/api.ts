@@ -83,6 +83,8 @@ export interface AuthUser {
   tags: { id: string; name: string }[];
   question_count: number;
   reading_progress: number;
+  daily_goal: number;
+  quiz_ratio: number;
 }
 
 export async function register(data: {
@@ -184,6 +186,16 @@ export async function resetPassword(data: {
 export async function fetchMe(): Promise<AuthUser> {
   const res = await authFetch(`${BASE_URL}/auth/me/`);
   if (!res.ok) throw new Error('Not authenticated');
+  return res.json();
+}
+
+export async function updateUserSettings(data: { daily_goal?: number; quiz_ratio?: number }): Promise<AuthUser> {
+  const res = await authFetch(`${BASE_URL}/auth/me/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update settings');
   return res.json();
 }
 
