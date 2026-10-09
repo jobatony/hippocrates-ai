@@ -27,3 +27,4 @@ class AccountsTests(TestCase):
         # Pass a negative value, which should be rejected by PositiveSmallIntegerField
         res = self.client.patch('/api/auth/me/', {'quiz_ratio': -1}, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+

@@ -140,7 +140,7 @@ export const QuizPage: React.FC = () => {
         let selectedIdx = -1;
 
         if (dueReviews.length > 0 && readyNew.length > 0) {
-          const targetReviews = currentUser?.quiz_ratio ?? 4;
+          const targetReviews = Math.max(1, Number(currentUser?.quiz_ratio || 4));
 
           if (consecutiveReviewsRef.current >= targetReviews) {
             selectedIdx = readyNew[0].idx;
@@ -170,7 +170,7 @@ export const QuizPage: React.FC = () => {
     checkQueue();
     const timer = setInterval(checkQueue, 1000);
     return () => clearInterval(timer);
-  }, [activeQueue, currentCard]);
+  }, [activeQueue, currentCard, currentUser]);
 
   if (!quizSession) {
     return (

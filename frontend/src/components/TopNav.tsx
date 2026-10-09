@@ -25,6 +25,12 @@ export const TopNav: React.FC = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    if (currentUser?.quiz_ratio) {
+      setQuizRatio(currentUser.quiz_ratio);
+    }
+  }, [currentUser?.quiz_ratio]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsProfileMenuOpen(false);
