@@ -122,19 +122,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
         <label className="font-label-md text-on-surface-variant mb-2 block">Options</label>
         {options.map((opt, idx) => (
           <div key={opt.letter} className="flex items-center gap-3 mb-3">
-            <input 
-              type="radio" 
-              name={`correct_option_${number}`} 
-              checked={opt.is_correct}
-              disabled={readOnly}
-              onChange={() => {
-                const newOpts = [...options];
-                newOpts.forEach(o => o.is_correct = false);
-                newOpts[idx].is_correct = true;
-                setOptions(newOpts);
-              }}
-              className="w-5 h-5 text-primary"
-            />
             <span className="font-title-md w-6">{opt.letter}.</span>
             <input 
               type="text"
