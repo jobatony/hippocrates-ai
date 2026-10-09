@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Exam, Subject, PastQuestion
+from .models import Exam, Subject, PastQuestion, QuestionAuditLog
 from .serializers import ExamSerializer, SubjectSerializer, PastQuestionSerializer
 
 class IsUploader(permissions.BasePermission):
@@ -50,7 +50,20 @@ class UploaderQuestionViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(uploaded_by=self.request.user, status='pending')
+        question = serializer.save(uploaded_by=self.request.user, status='pending')
+        QuestionAuditLog.objects.create(
+            question=question,
+            user=self.request.user,
+            action='uploaded'
+        )
+
+    def perform_update(self, serializer):
+        question = serializer.save()
+        QuestionAuditLog.objects.create(
+            question=question,
+            user=self.request.user,
+            action='edited'
+        )
 
 class ValidatorQuestionViewSet(viewsets.ModelViewSet):
     serializer_class = PastQuestionSerializer
@@ -81,6 +94,11 @@ class ValidatorQuestionViewSet(viewsets.ModelViewSet):
             question.validated_by = request.user
             question.validator_feedback = ''
             question.save()
+            QuestionAuditLog.objects.create(
+                question=question,
+                user=request.user,
+                action='approved'
+            )
             return Response({'status': 'approved'})
             
         elif action_type == 'request_changes':
@@ -90,9 +108,23 @@ class ValidatorQuestionViewSet(viewsets.ModelViewSet):
             question.validated_by = request.user
             question.validator_feedback = feedback
             question.save()
+            QuestionAuditLog.objects.create(
+                question=question,
+                user=request.user,
+                action='changes_requested',
+                notes=feedback
+            )
             return Response({'status': 'changes_requested'})
             
         return Response({'error': 'Invalid action.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_update(self, serializer):
+        question = serializer.save()
+        QuestionAuditLog.objects.create(
+            question=question,
+            user=self.request.user,
+            action='edited'
+        )
 
 class QuestionListViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PastQuestionSerializer
@@ -124,3 +156,96 @@ class QuestionListViewSet(viewsets.ReadOnlyModelViewSet):
             
         years = PastQuestion.objects.filter(exam_id=exam, subject_id=subject).values_list('year', flat=True).distinct().order_by('-year')
         return Response(list(years))
+
+from rest_framework.views import APIView
+from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
+from django.utils.dateparse import parse_datetime
+
+User = get_user_model()
+
+class AnalyticsSummaryView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+    
+    def get(self, request):
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        users = User.objects.all()
+        audit_filter = Q()
+        if start_date:
+            parsed_start = parse_datetime(start_date)
+            if parsed_start:
+                audit_filter &= Q(questionauditlog__timestamp__gte=parsed_start)
+        if end_date:
+            parsed_end = parse_datetime(end_date)
+            if parsed_end:
+                audit_filter &= Q(questionauditlog__timestamp__lte=parsed_end)
+            
+        users = users.annotate(
+            total_uploaded=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='uploaded')),
+            total_approved=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='approved')),
+            total_changes_requested=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='changes_requested')),
+            total_edited=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='edited')),
+        )
+        
+        users = users.filter(
+            Q(total_uploaded__gt=0) | 
+            Q(total_approved__gt=0) | 
+            Q(total_changes_requested__gt=0) | 
+            Q(total_edited__gt=0)
+        )
+        
+        users = users.order_by('-total_approved', '-total_uploaded')
+        
+        data = []
+        for u in users:
+            roles = [g.name for g in u.groups.all()]
+            data.append({
+                'id': u.id,
+                'email': u.email,
+                'first_name': u.first_name,
+                'last_name': u.last_name,
+                'roles': roles,
+                'total_uploaded': u.total_uploaded,
+                'total_approved': u.total_approved,
+                'total_changes_requested': u.total_changes_requested,
+                'total_edited': u.total_edited,
+            })
+            
+        return Response(data)
+
+class UserAnalyticsDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+
+    def get(self, request, user_id):
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        logs = QuestionAuditLog.objects.filter(user_id=user_id).select_related('question', 'question__exam', 'question__subject')
+        
+        if start_date:
+            parsed_start = parse_datetime(start_date)
+            if parsed_start:
+                logs = logs.filter(timestamp__gte=parsed_start)
+        if end_date:
+            parsed_end = parse_datetime(end_date)
+            if parsed_end:
+                logs = logs.filter(timestamp__lte=parsed_end)
+                
+        logs = logs.order_by('-timestamp')
+        
+        # Paginate if needed, but for now we can just return a fixed limit or all
+        logs = logs[:500] # Cap at 500 for safety
+        
+        data = []
+        for log in logs:
+            data.append({
+                'id': log.id,
+                'action': log.action,
+                'timestamp': log.timestamp,
+                'notes': log.notes,
+                'question_info': f"{log.question.exam.name} {log.question.year} {log.question.subject.name} - Q{log.question.number}"
+            })
+            
+        return Response(data)
