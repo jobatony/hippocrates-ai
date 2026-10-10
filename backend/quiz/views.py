@@ -335,11 +335,11 @@ class QuizSessionView(APIView):
             needs_reset = False
             
             # Reset if mastered on a previous day and due again today
-            if s.mastered_at and s.mastered_at.date() < today:
+            if s.mastered_at and timezone.localtime(s.mastered_at).date() < today:
                 needs_reset = True
                 
             # Reset if partially studied on a previous day
-            if s.last_reviewed and s.last_reviewed.date() < today and s.streak > 0:
+            if s.last_reviewed and timezone.localtime(s.last_reviewed).date() < today and s.streak > 0:
                 needs_reset = True
                 
             if needs_reset:
@@ -420,7 +420,7 @@ class QuizSessionAnswerView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         # Lazy evaluation: if it was reviewed on a previous day, its streak should have reset to 0
-        if schedule.last_reviewed and schedule.last_reviewed.date() < today:
+        if schedule.last_reviewed and timezone.localtime(schedule.last_reviewed).date() < today:
             schedule.streak = 0
             schedule.mastered_at = None
 
