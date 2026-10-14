@@ -8,4 +8,5 @@ urlpatterns = [
     path('api/auth/', include('accounts.urls')),
     path('api/', include('documents.urls')),
     path('api/questions/', include('quiz.urls')),
+    path('api/past-questions/', include('past_questions.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

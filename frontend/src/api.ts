@@ -79,6 +79,9 @@ export interface AuthUser {
   last_name: string;
   email: string;
   is_email_verified: boolean;
+  groups: string[];
+  is_staff: boolean;
+  is_superuser: boolean;
   created_at: string;
   tags: { id: string; name: string }[];
   question_count: number;
@@ -538,3 +541,203 @@ export async function submitCardAnswer(
   return res.json();
 }
 
+
+// ─── Past Questions ──────────────────────────────────────────────────────────
+
+export interface Exam {
+  id: number;
+  name: string;
+}
+
+export interface Subject {
+  id: number;
+  name: string;
+}
+
+export interface QuestionOption {
+  id?: number;
+  letter: string;
+  text: string;
+  is_correct: boolean | null;
+}
+
+export interface PastQuestion {
+  id: number;
+  exam: number;
+  exam_name: string;
+  subject: number;
+  subject_name: string;
+  year: number;
+  number: number;
+  question_text: string;
+  has_diagram: boolean;
+  image: string | null;
+  status: 'pending' | 'approved' | 'changes_requested';
+  validator_feedback: string | null;
+  options: QuestionOption[];
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchExams(): Promise<Exam[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/exams/`);
+  return res.json();
+}
+
+export async function fetchSubjects(): Promise<Subject[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/subjects/`);
+  return res.json();
+}
+
+export async function fetchAvailableYears(exam: number, subject: number): Promise<number[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/list/available_years/?exam=${exam}&subject=${subject}`);
+  return res.json();
+}
+
+export async function fetchQuestionList(exam: number, subject: number, year: number): Promise<PastQuestion[]> {
+  const res = await authFetch(`${BASE_URL}/past-questions/list/?exam=${exam}&subject=${subject}&year=${year}`);
+  return res.json();
+}
+
+export async function fetchUploaderQuestions(exam?: number, subject?: number, year?: number): Promise<PastQuestion[]> {
+  let url = `${BASE_URL}/past-questions/uploader/questions/`;
+  const params = new URLSearchParams();
+  if (exam) params.append('exam', exam.toString());
+  if (subject) params.append('subject', subject.toString());
+  if (year) params.append('year', year.toString());
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  const res = await authFetch(url);
+  return res.json();
+}
+
+export async function uploadPastQuestion(data: Partial<PastQuestion>): Promise<PastQuestion> {
+  const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
+  return res.json();
+}
+
+export async function updatePastQuestion(id: number, data: Partial<PastQuestion>): Promise<PastQuestion> {
+  const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
+  return res.json();
+}
+
+export async function deleteUploaderQuestion(id: number): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
+}
+
+export async function fetchValidatorQuestions(exam?: number, subject?: number): Promise<PastQuestion[]> {
+  let url = `${BASE_URL}/past-questions/validator/questions/`;
+  const params = new URLSearchParams();
+  if (exam) params.append('exam', exam.toString());
+  if (subject) params.append('subject', subject.toString());
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  const res = await authFetch(url);
+  return res.json();
+}
+
+export async function updateValidatorQuestion(id: number, data: Partial<PastQuestion>): Promise<PastQuestion> {
+  const res = await authFetch(`${BASE_URL}/past-questions/validator/questions/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
+  return res.json();
+}
+
+export async function validatePastQuestion(id: number, action: 'approve' | 'request_changes', feedback?: string): Promise<{ status: string }> {
+  const res = await authFetch(`${BASE_URL}/past-questions/validator/questions/${id}/validate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, feedback }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to validate question');
+  }
+  return res.json();
+}
+
+// ─── Admin Management ────────────────────────────────────────────────────────
+
+export async function createExam(name: string): Promise<Exam> {
+  const res = await authFetch(`${BASE_URL}/past-questions/exams/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create exam');
+  return res.json();
+}
+
+export async function deleteExam(id: number): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/past-questions/exams/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete exam');
+}
+
+export async function createSubject(name: string): Promise<Subject> {
+  const res = await authFetch(`${BASE_URL}/past-questions/subjects/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create subject');
+  return res.json();
+}
+
+export async function deleteSubject(id: number): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/past-questions/subjects/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete subject');
+}
+
+export async function fetchAdminUsers(search: string = ''): Promise<AuthUser[]> {
+  const res = await authFetch(`${BASE_URL}/auth/admin/users/?search=${encodeURIComponent(search)}`);
+  if (!res.ok) throw new Error('Failed to fetch users');
+  return res.json();
+}
+
+export async function updateUserRoles(userId: string, roles: string[]): Promise<AuthUser> {
+  const res = await authFetch(`${BASE_URL}/auth/admin/users/${userId}/roles/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roles }),
+  });
+  if (!res.ok) throw new Error('Failed to update roles');
+  return res.json();
+}

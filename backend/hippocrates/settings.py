@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'documents',
     'quiz',
     'accounts',
+    'past_questions',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
