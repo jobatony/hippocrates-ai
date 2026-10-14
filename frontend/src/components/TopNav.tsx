@@ -342,8 +342,6 @@ export const TopNav: React.FC = () => {
                 )}
               </div>
             )}
-              </div>
-            )}
           </div>
         </div>
 
