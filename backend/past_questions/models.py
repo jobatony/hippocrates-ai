@@ -56,3 +56,22 @@ class QuestionOption(models.Model):
 
     def __str__(self):
         return f"{self.letter}. {self.text[:20]}"
+
+class QuestionAuditLog(models.Model):
+    ACTION_CHOICES = [
+        ('uploaded', 'Uploaded'),
+        ('edited', 'Edited'),
+        ('approved', 'Approved'),
+        ('changes_requested', 'Changes Requested'),
+    ]
+    question = models.ForeignKey(PastQuestion, on_delete=models.CASCADE, related_name='audit_logs')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.action} - {self.question}"

@@ -741,3 +741,46 @@ export async function updateUserRoles(userId: string, roles: string[]): Promise<
   if (!res.ok) throw new Error('Failed to update roles');
   return res.json();
 }
+
+// ─── Analytics ─────────────────────────────────────────────────────────────
+export interface AnalyticsSummary {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  roles: string[];
+  total_uploaded: number;
+  total_approved: number;
+  total_changes_requested: number;
+  total_edited: number;
+}
+
+export interface AnalyticsDetail {
+  id: number;
+  action: string;
+  timestamp: string;
+  notes: string | null;
+  question_info: string;
+}
+
+export const fetchAnalyticsSummary = async (startDate?: string, endDate?: string): Promise<AnalyticsSummary[]> => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+  
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const response = await authFetch(`${BASE_URL}/past-questions/analytics/summary/${query}`);
+  if (!response.ok) throw new Error('Failed to fetch analytics summary');
+  return response.json();
+};
+
+export const fetchUserAnalyticsDetail = async (userId: string, startDate?: string, endDate?: string): Promise<AnalyticsDetail[]> => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('start_date', startDate);
+  if (endDate) params.append('end_date', endDate);
+  
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const response = await authFetch(`${BASE_URL}/past-questions/analytics/user/${userId}/${query}`);
+  if (!response.ok) throw new Error('Failed to fetch user analytics detail');
+  return response.json();
+};
