@@ -546,7 +546,7 @@ export interface QuestionOption {
   id?: number;
   letter: string;
   text: string;
-  is_correct: boolean;
+  is_correct: boolean | null;
 }
 
 export interface PastQuestion {
@@ -626,6 +626,16 @@ export async function updatePastQuestion(id: number, data: Partial<PastQuestion>
     throw new Error(JSON.stringify(err));
   }
   return res.json();
+}
+
+export async function deleteUploaderQuestion(id: number): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/past-questions/uploader/questions/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(err));
+  }
 }
 
 export async function fetchValidatorQuestions(exam?: number, subject?: number): Promise<PastQuestion[]> {

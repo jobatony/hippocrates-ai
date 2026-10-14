@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Shield, UploadCloud, CheckSquare, ExternalLink, ArrowRight, BookOpen, LayoutDashboard, BrainCircuit, Database } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { SearchBar } from './SearchBar';
 
@@ -125,8 +125,8 @@ export const TopNav: React.FC = () => {
 
             {/* Profile Dropdown */}
             {isProfileMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-surface-container rounded-xl shadow-lg border border-outline-variant overflow-hidden z-50">
-                <div className="px-4 py-3 border-b border-outline-variant">
+              <div className="absolute right-0 top-full mt-2 w-64 bg-surface-container rounded-2xl shadow-xl border border-outline-variant overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-outline-variant bg-surface-container-high/40">
                   <p className="text-body-md font-bold text-on-surface truncate">
                     {currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
                   </p>
@@ -134,13 +134,140 @@ export const TopNav: React.FC = () => {
                     {currentUser?.email || ''}
                   </p>
                 </div>
-                <div className="p-2">
+
+                <div className="p-2 flex flex-col gap-1">
+                  {/* If inside Data Entry: Show portal links */}
+                  {location.pathname.startsWith('/data-entry') ? (
+                    <>
+                      <div className="px-2 py-1 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant/70">
+                        Data Entry Portals
+                      </div>
+                      {(currentUser?.is_superuser || currentUser?.is_staff) && (
+                        <Link
+                          to="/data-entry/admin"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-body-sm font-medium transition-colors ${
+                            location.pathname === '/data-entry/admin'
+                              ? 'bg-primary-container text-on-primary-container'
+                              : 'text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <Shield size={16} className="text-primary" />
+                          <span>Admin</span>
+                        </Link>
+                      )}
+                      {currentUser?.groups?.includes('Uploader') && (
+                        <Link
+                          to="/data-entry/upload"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-body-sm font-medium transition-colors ${
+                            location.pathname === '/data-entry/upload'
+                              ? 'bg-primary-container text-on-primary-container'
+                              : 'text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <UploadCloud size={16} className="text-primary" />
+                          <span>Upload</span>
+                        </Link>
+                      )}
+                      {currentUser?.groups?.includes('Validator') && (
+                        <Link
+                          to="/data-entry/validate"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-body-sm font-medium transition-colors ${
+                            location.pathname === '/data-entry/validate'
+                              ? 'bg-primary-container text-on-primary-container'
+                              : 'text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <CheckSquare size={16} className="text-primary" />
+                          <span>Validate</span>
+                        </Link>
+                      )}
+                      
+                      <hr className="my-1 border-outline-variant" />
+                      
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-body-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors"
+                      >
+                        <ExternalLink size={16} className="text-secondary" />
+                        <span>Exit to Main App</span>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      {/* Mobile Main Navigation Links (when desktop nav is hidden) */}
+                      <div className="lg:hidden flex flex-col gap-1">
+                        <div className="px-2 py-1 text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant/70">
+                          Navigation
+                        </div>
+                        <Link
+                          to="/dashboard"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-body-sm font-medium transition-colors ${
+                            location.pathname === '/dashboard'
+                              ? 'bg-primary-container text-on-primary-container'
+                              : 'text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <LayoutDashboard size={16} className="text-primary" />
+                          <span>Dashboard</span>
+                        </Link>
+                        <Link
+                          to="/library"
+                          onClick={() => { setMode('read'); setIsProfileMenuOpen(false); }}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-body-sm font-medium transition-colors ${
+                            location.pathname === '/library'
+                              ? 'bg-primary-container text-on-primary-container'
+                              : 'text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <BookOpen size={16} className="text-primary" />
+                          <span>Library</span>
+                        </Link>
+                        <Link
+                          to="/quiz"
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-body-sm font-medium transition-colors ${
+                            location.pathname === '/quiz'
+                              ? 'bg-primary-container text-on-primary-container'
+                              : 'text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <BrainCircuit size={16} className="text-primary" />
+                          <span>Quiz</span>
+                        </Link>
+                        <hr className="my-1 border-outline-variant" />
+                      </div>
+
+                      {/* Shortcut to Data Entry Portal if user has roles */}
+                      {(currentUser?.is_superuser || currentUser?.is_staff || currentUser?.groups?.includes('Uploader') || currentUser?.groups?.includes('Validator')) && (
+                        <>
+                          <Link
+                            to="/data-entry"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="flex items-center justify-between px-3 py-2.5 rounded-xl text-body-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Database size={16} />
+                              <span>Data Entry Portal</span>
+                            </div>
+                            <ArrowRight size={14} />
+                          </Link>
+                          <hr className="my-1 border-outline-variant" />
+                        </>
+                      )}
+                    </>
+                  )}
+
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-error hover:bg-error-container hover:text-on-error-container rounded-lg transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-error hover:bg-error-container hover:text-on-error-container rounded-xl transition-colors text-left font-title-sm mt-0.5"
                   >
-                    <LogOut size={18} />
-                    <span className="font-title-sm">Log out</span>
+                    <LogOut size={16} />
+                    <span>Log out</span>
                   </button>
                 </div>
               </div>

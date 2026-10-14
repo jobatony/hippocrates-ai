@@ -52,6 +52,18 @@ class UploaderQuestionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user, status='pending')
 
+    def perform_update(self, serializer):
+        if serializer.instance.status == 'approved':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Approved questions cannot be modified.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.status == 'approved':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Approved questions cannot be deleted.")
+        instance.delete()
+
 class ValidatorQuestionViewSet(viewsets.ModelViewSet):
     serializer_class = PastQuestionSerializer
     permission_classes = [permissions.IsAuthenticated, IsValidator]

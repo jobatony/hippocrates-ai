@@ -48,7 +48,7 @@ class QuestionOption(models.Model):
     question = models.ForeignKey(PastQuestion, on_delete=models.CASCADE, related_name='options')
     letter = models.CharField(max_length=1) # A, B, C, D, E
     text = models.TextField()
-    is_correct = models.BooleanField(default=False)
+    is_correct = models.BooleanField(null=True, blank=True, default=None)
 
     class Meta:
         unique_together = ('question', 'letter')

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { TopNav } from '../../components/TopNav';
-import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, updatePastQuestion, fetchAvailableYears, fetchQuestionList } from '../../api';
+import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, updatePastQuestion, deleteUploaderQuestion, fetchAvailableYears, fetchQuestionList } from '../../api';
 import type { Exam, Subject, PastQuestion } from '../../api';
 import { QuestionEditor } from './QuestionEditor';
 import { QuestionViewer } from './QuestionViewer';
-import { Menu, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, SlidersHorizontal } from 'lucide-react';
 
 export const UploaderDashboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<'upload' | 'list'>('upload');
@@ -129,13 +129,13 @@ export const UploaderDashboard: React.FC = () => {
 
         {/* Left Pane - Explorer */}
         <div 
-          style={{ width: isMobile ? '300px' : `${leftWidth}%` }} 
+          style={{ width: isMobile ? 'min(320px, 85vw)' : `${leftWidth}%` }} 
           className={`
             ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             fixed md:relative top-20 md:top-0 bottom-0 left-0 z-50 md:z-0
             bg-surface-container-low md:bg-surface
             transition-transform duration-300
-            border-r border-outline-variant p-6 flex flex-col gap-6 overflow-y-auto shrink-0
+            border-r border-outline-variant p-4 sm:p-6 flex flex-col gap-5 sm:gap-6 overflow-y-auto shrink-0
           `}
         >
           <div className="flex items-center justify-between">
@@ -162,20 +162,20 @@ export const UploaderDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1 min-w-0">
               <label className="font-label-md text-on-surface-variant">Exam</label>
               <select 
-                className="w-full mt-1 bg-surface-container border border-outline-variant rounded-lg p-2"
+                className="w-full mt-1 bg-surface-container border border-outline-variant rounded-lg p-2 text-body-md"
                 value={selectedExam} onChange={e => setSelectedExam(Number(e.target.value))}
               >
                 {exams.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
               </select>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className="font-label-md text-on-surface-variant">Subject</label>
               <select 
-                className="w-full mt-1 bg-surface-container border border-outline-variant rounded-lg p-2"
+                className="w-full mt-1 bg-surface-container border border-outline-variant rounded-lg p-2 text-body-md"
                 value={selectedSubject} onChange={e => setSelectedSubject(Number(e.target.value))}
               >
                 {subjects.map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
@@ -268,16 +268,16 @@ export const UploaderDashboard: React.FC = () => {
         {/* Right Pane - Details & Form */}
         <div 
           style={{ width: isMobile ? '100%' : `calc(${100 - leftWidth}% - 4px)` }} 
-          className="flex flex-1 md:flex-none p-6 overflow-y-auto bg-surface-container-lowest flex-col relative"
+          className="flex flex-1 md:flex-none p-4 sm:p-6 overflow-y-auto bg-surface-container-lowest flex-col relative min-w-0"
         >
           {/* Mobile Header */}
           <div className="md:hidden flex items-center mb-6 shrink-0">
             <button 
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="p-2 -ml-2 rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-2"
+              className="p-2.5 -ml-1 rounded-xl bg-surface-container border border-outline-variant hover:bg-surface-variant transition-colors flex items-center gap-2 shadow-sm"
             >
-              <Menu size={24} />
-              <span className="font-title-sm">Back to Dashboard</span>
+              <SlidersHorizontal size={18} className="text-primary" />
+              <span className="font-title-sm">Question Selector</span>
             </button>
           </div>
 
@@ -296,6 +296,10 @@ export const UploaderDashboard: React.FC = () => {
                   year={selectedYear} 
                   number={selectedNumber} 
                   existingQuestion={currentQuestion}
+                  onDelete={currentQuestion ? async () => {
+                    await deleteUploaderQuestion(currentQuestion.id);
+                    fetchUploaderQuestions(selectedExam as number, selectedSubject as number, selectedYear).then(setQuestions);
+                  } : undefined}
                   onSubmit={async (payload) => {
                     if (currentQuestion) {
                       await updatePastQuestion(currentQuestion.id, payload);

@@ -12,6 +12,8 @@ class SubjectSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 class QuestionOptionSerializer(serializers.ModelSerializer):
+    is_correct = serializers.BooleanField(required=False, allow_null=True, default=None)
+
     class Meta:
         model = QuestionOption
         fields = ['id', 'letter', 'text', 'is_correct']
@@ -29,6 +31,17 @@ class PastQuestionSerializer(serializers.ModelSerializer):
             'options', 'created_at', 'updated_at'
         ]
         read_only_fields = ['status', 'validator_feedback']
+
+    def validate_question_text(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Question text cannot be empty.")
+        return value
+
+    def validate_options(self, value):
+        non_empty = [opt for opt in value if opt.get('text', '').strip()]
+        if len(non_empty) < 2:
+            raise serializers.ValidationError("A minimum of two non-empty options is required.")
+        return value
 
     def create(self, validated_data):
         options_data = validated_data.pop('options')
