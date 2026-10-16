@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { TopNav } from '../../components/TopNav';
-import { fetchExams, fetchSubjects, fetchValidatorQuestions, validatePastQuestion, updateValidatorQuestion, fetchAvailableYears, fetchQuestionList } from '../../api';
+import { fetchExams, fetchSubjects, fetchValidatorQuestions, validatePastQuestion, updateValidatorQuestion, deleteAdminQuestion, fetchAvailableYears, fetchQuestionList } from '../../api';
 import type { Exam, Subject, PastQuestion } from '../../api';
 import { Loader2, ChevronLeft, ChevronRight, X, SlidersHorizontal } from 'lucide-react';
 import { QuestionEditor } from './QuestionEditor';
 import { QuestionViewer } from './QuestionViewer';
+import { ConfirmModal } from '../../components/ConfirmModal';
+import { useStore } from '../../store/useStore';
 
 export const ValidatorDashboard: React.FC = () => {
+  const currentUser = useStore(s => s.currentUser);
+  const isAdmin = Boolean(currentUser?.is_staff || currentUser?.is_superuser);
   const [viewMode, setViewMode] = useState<'validate' | 'list'>('validate');
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -33,6 +37,8 @@ export const ValidatorDashboard: React.FC = () => {
   const [selectedListYear, setSelectedListYear] = useState<number | ''>('');
   const [listQuestions, setListQuestions] = useState<PastQuestion[]>([]);
   const [selectedListNumber, setSelectedListNumber] = useState<number | null>(null);
+  const [questionToDelete, setQuestionToDelete] = useState<PastQuestion | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (selectedQuestion || selectedListNumber) {
@@ -102,6 +108,25 @@ export const ValidatorDashboard: React.FC = () => {
       alert(e);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!questionToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteAdminQuestion(questionToDelete.id);
+      const updated = listQuestions.filter(q => q.id !== questionToDelete.id);
+      setListQuestions(updated);
+      setSelectedListNumber(updated.length > 0 ? updated[0].number : null);
+      setQuestionToDelete(null);
+      if (selectedExam && selectedSubject) {
+        fetchValidatorQuestions(selectedExam as number, selectedSubject as number).then(setQuestions);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -361,7 +386,13 @@ export const ValidatorDashboard: React.FC = () => {
                   <p className="font-title-md">Select an existing question from the list to view</p>
                 </div>
               ) : listQuestions.find(q => q.number === selectedListNumber) ? (
-                <QuestionViewer question={listQuestions.find(q => q.number === selectedListNumber)!} />
+                <QuestionViewer
+                  question={listQuestions.find(q => q.number === selectedListNumber)!}
+                  onDelete={isAdmin ? () => {
+                    const target = listQuestions.find(q => q.number === selectedListNumber);
+                    if (target) setQuestionToDelete(target);
+                  } : undefined}
+                />
               ) : null
             )}
           </div>
@@ -422,6 +453,16 @@ export const ValidatorDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!questionToDelete}
+        onClose={() => setQuestionToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title="Delete Question?"
+        message={`Are you sure you want to delete ${questionToDelete?.exam_name} ${questionToDelete?.year} ${questionToDelete?.subject_name} - Question ${questionToDelete?.number}? This action cannot be undone.`}
+        confirmText="Delete"
+      />
     </div>
   );
 };

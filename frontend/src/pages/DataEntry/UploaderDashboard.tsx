@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { TopNav } from '../../components/TopNav';
-import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, updatePastQuestion, deleteUploaderQuestion, fetchAvailableYears, fetchQuestionList } from '../../api';
+import { fetchExams, fetchSubjects, fetchUploaderQuestions, uploadPastQuestion, updatePastQuestion, deleteUploaderQuestion, deleteAdminQuestion, fetchAvailableYears, fetchQuestionList } from '../../api';
 import type { Exam, Subject, PastQuestion } from '../../api';
 import { QuestionEditor } from './QuestionEditor';
 import { QuestionViewer } from './QuestionViewer';
+import { ConfirmModal } from '../../components/ConfirmModal';
 import { ChevronLeft, ChevronRight, X, SlidersHorizontal } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 
 export const UploaderDashboard: React.FC = () => {
+  const currentUser = useStore(s => s.currentUser);
+  const isAdmin = Boolean(currentUser?.is_staff || currentUser?.is_superuser);
   const [viewMode, setViewMode] = useState<'upload' | 'list'>('upload');
 
   const [exams, setExams] = useState<Exam[]>([]);
@@ -22,6 +26,8 @@ export const UploaderDashboard: React.FC = () => {
   const [selectedListYear, setSelectedListYear] = useState<number | ''>('');
   const [listQuestions, setListQuestions] = useState<PastQuestion[]>([]);
   const [selectedListNumber, setSelectedListNumber] = useState<number | null>(null);
+  const [questionToDelete, setQuestionToDelete] = useState<PastQuestion | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchExams(), fetchSubjects()]).then(([examsData, subjectsData]) => {
@@ -114,6 +120,25 @@ export const UploaderDashboard: React.FC = () => {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  const handleConfirmDelete = async () => {
+    if (!questionToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteAdminQuestion(questionToDelete.id);
+      const updated = listQuestions.filter(q => q.id !== questionToDelete.id);
+      setListQuestions(updated);
+      setSelectedListNumber(updated.length > 0 ? updated[0].number : null);
+      setQuestionToDelete(null);
+      if (selectedExam && selectedSubject && selectedYear) {
+        fetchUploaderQuestions(selectedExam as number, selectedSubject as number, selectedYear).then(setQuestions);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className={`bg-surface h-screen overflow-hidden text-on-surface flex flex-col ${isDragging ? 'select-none cursor-col-resize' : ''}`}>
@@ -288,7 +313,10 @@ export const UploaderDashboard: React.FC = () => {
                   <p className="font-title-md">Select a question number to view or edit</p>
                 </div>
               ) : currentQuestion?.status === 'approved' ? (
-                <QuestionViewer question={currentQuestion} />
+                <QuestionViewer
+                  question={currentQuestion}
+                  onDelete={isAdmin ? () => setQuestionToDelete(currentQuestion) : undefined}
+                />
               ) : (
                 <QuestionEditor 
                   exam={selectedExam as number} 
@@ -316,7 +344,13 @@ export const UploaderDashboard: React.FC = () => {
                   <p className="font-title-md">Select an existing question from the list to view</p>
                 </div>
               ) : listQuestions.find(q => q.number === selectedListNumber) ? (
-                <QuestionViewer question={listQuestions.find(q => q.number === selectedListNumber)!} />
+                <QuestionViewer
+                  question={listQuestions.find(q => q.number === selectedListNumber)!}
+                  onDelete={isAdmin ? () => {
+                    const target = listQuestions.find(q => q.number === selectedListNumber);
+                    if (target) setQuestionToDelete(target);
+                  } : undefined}
+                />
               ) : null
             )}
           </div>
@@ -367,6 +401,16 @@ export const UploaderDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!questionToDelete}
+        onClose={() => setQuestionToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title="Delete Question?"
+        message={`Are you sure you want to delete ${questionToDelete?.exam_name} ${questionToDelete?.year} ${questionToDelete?.subject_name} - Question ${questionToDelete?.number}? This action cannot be undone.`}
+        confirmText="Delete"
+      />
     </div>
   );
 };

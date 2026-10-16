@@ -3,8 +3,9 @@ import { useStore } from '../store/useStore';
 import { MaterialCard } from './MaterialCard';
 import { fetchMaterialDetail, renameMaterial, deleteMaterial, fetchMaterials, fetchTags } from '../api';
 import { AppModal } from './AppModal';
+import { ConfirmModal } from './ConfirmModal';
 import { AddTagModal } from './AddTagModal';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { Material } from '../store/useStore';
 
 interface Props {
@@ -154,34 +155,19 @@ export const MaterialsScreen: React.FC<Props> = ({ onClose }) => {
       )}
 
       {/* Delete Modal */}
-      {materialToDelete && (
-        <AppModal isOpen={true} onClose={() => setMaterialToDelete(null)} title="Delete Material?" hideCloseButton>
-          <div className="flex flex-col items-center text-center mt-md">
-            <div className="w-12 h-12 rounded-full bg-error-container text-error flex items-center justify-center mb-md">
-              <Trash2 size={24} />
-            </div>
-            <p className="text-body-md text-on-surface-variant w-full whitespace-normal break-words">
-              Are you sure you want to delete <span className="font-bold text-on-surface break-all">"{materialToDelete.title}"</span>? This action cannot be undone.
-            </p>
-          </div>
-          <div className="flex justify-end gap-sm mt-xl">
-            <button
-              onClick={() => setMaterialToDelete(null)}
-              disabled={isProcessing}
-              className="px-lg py-sm rounded-full text-label-md font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              disabled={isProcessing}
-              className="px-lg py-sm rounded-full text-label-md font-bold bg-error text-on-error hover:bg-error/90 shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-xs"
-            >
-              {isProcessing ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
-            </button>
-          </div>
-        </AppModal>
-      )}
+      <ConfirmModal
+        isOpen={!!materialToDelete}
+        onClose={() => setMaterialToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Material?"
+        message={
+          <>
+            Are you sure you want to delete <span className="font-bold text-on-surface break-all">"{materialToDelete?.title}"</span>? This action cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        isLoading={isProcessing}
+      />
     </div>
   );
 };

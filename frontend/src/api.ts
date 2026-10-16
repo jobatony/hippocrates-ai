@@ -574,6 +574,9 @@ export interface PastQuestion {
   image: string | null;
   status: 'pending' | 'approved' | 'changes_requested';
   validator_feedback: string | null;
+  uploaded_by?: string | null;
+  uploaded_by_email?: string;
+  uploaded_by_name?: string;
   options: QuestionOption[];
   created_at: string;
   updated_at: string;
@@ -742,6 +745,51 @@ export async function updateUserRoles(userId: string, roles: string[]): Promise<
   return res.json();
 }
 
+export interface AdminQuestionFilters {
+  exam?: number | string;
+  subject?: number | string;
+  year?: number | string;
+  status?: string;
+  uploaded_by?: string;
+}
+
+export async function fetchAdminQuestions(filters: AdminQuestionFilters = {}): Promise<PastQuestion[]> {
+  const params = new URLSearchParams();
+  if (filters.exam) params.append('exam', String(filters.exam));
+  if (filters.subject) params.append('subject', String(filters.subject));
+  if (filters.year) params.append('year', String(filters.year));
+  if (filters.status) params.append('status', filters.status);
+  if (filters.uploaded_by) params.append('uploaded_by', filters.uploaded_by);
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const res = await authFetch(`${BASE_URL}/past-questions/admin/questions/${query}`);
+  if (!res.ok) throw new Error('Failed to fetch admin questions');
+  return res.json();
+}
+
+export async function deleteAdminQuestion(id: number): Promise<void> {
+  const res = await authFetch(`${BASE_URL}/past-questions/admin/questions/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || err.detail || 'Failed to delete question');
+  }
+}
+
+export async function bulkDeleteAdminQuestions(ids: number[]): Promise<{ deleted_count: number }> {
+  const res = await authFetch(`${BASE_URL}/past-questions/admin/questions/bulk_delete/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || err.detail || 'Failed to bulk delete questions');
+  }
+  return res.json();
+}
+
 // ─── Analytics ─────────────────────────────────────────────────────────────
 export interface AnalyticsSummary {
   id: string;
@@ -753,6 +801,7 @@ export interface AnalyticsSummary {
   total_approved: number;
   total_changes_requested: number;
   total_edited: number;
+  total_deleted?: number;
 }
 
 export interface AnalyticsDetail {

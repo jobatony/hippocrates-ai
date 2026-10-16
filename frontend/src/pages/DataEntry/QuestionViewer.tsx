@@ -1,12 +1,14 @@
 import React from 'react';
 import type { PastQuestion } from '../../api';
+import { Trash2 } from 'lucide-react';
 
 interface QuestionViewerProps {
   question: PastQuestion;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export const QuestionViewer: React.FC<QuestionViewerProps> = ({ question, onEdit }) => {
+export const QuestionViewer: React.FC<QuestionViewerProps> = ({ question, onEdit, onDelete }) => {
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -14,13 +16,26 @@ export const QuestionViewer: React.FC<QuestionViewerProps> = ({ question, onEdit
           <h2 className="font-display-sm mb-1 sm:mb-2 break-words">{question.exam_name} {question.year} - {question.subject_name}</h2>
           <h3 className="font-title-lg text-primary">Question {question.number}</h3>
         </div>
-        {onEdit && (
-          <button 
-            onClick={onEdit}
-            className="self-start sm:self-auto px-4 py-2 border border-outline-variant hover:bg-surface-variant rounded-lg font-title-sm transition-colors shrink-0"
-          >
-            Edit Question
-          </button>
+        {(onEdit || onDelete) && (
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0">
+            {onEdit && (
+              <button 
+                onClick={onEdit}
+                className="px-4 py-2 border border-outline-variant hover:bg-surface-variant rounded-lg font-title-sm transition-colors"
+              >
+                Edit Question
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="px-4 py-2 bg-error/10 text-error border border-error/30 hover:bg-error hover:text-on-error rounded-lg font-title-sm transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 size={16} />
+                <span>Delete Question</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
       

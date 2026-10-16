@@ -9,6 +9,7 @@ import type { Material } from '../store/useStore';
 import { MaterialsScreen } from './MaterialsScreen';
 import { MaterialCard } from './MaterialCard';
 import { AppModal } from './AppModal';
+import { ConfirmModal } from './ConfirmModal';
 import { TagManagementModal } from './TagManagementModal';
 import { SeeAllTagsModal } from './SeeAllTagsModal';
 import { TopNav } from './TopNav';
@@ -682,32 +683,19 @@ export const Layout: React.FC = () => {
       </AppModal>
 
       {/* Global Delete Confirm Modal */}
-      <AppModal isOpen={!!materialToDelete} onClose={() => setMaterialToDelete(null)} title="Delete Material?" hideCloseButton>
-          <div className="flex flex-col items-center text-center mt-md">
-            <div className="w-12 h-12 rounded-full bg-error-container text-error flex items-center justify-center mb-md">
-              <Trash2 size={24} />
-            </div>
-            <p className="text-body-md text-on-surface-variant w-full whitespace-normal break-words">
-              Are you sure you want to delete <span className="font-bold text-on-surface break-all">"{materialToDelete?.title}"</span>? This action cannot be undone.
-            </p>
-          </div>
-          <div className="flex justify-end gap-sm mt-xl">
-            <button
-              onClick={() => setMaterialToDelete(null)}
-              disabled={isDeleting}
-              className="px-lg py-sm rounded-full text-label-md font-bold text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              disabled={isDeleting}
-              className="px-lg py-sm rounded-full text-label-md font-bold bg-error text-on-error hover:bg-error/90 shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-xs"
-            >
-              {isDeleting ? <Loader2 size={16} className="animate-spin" /> : 'Delete'}
-            </button>
-          </div>
-      </AppModal>
+      <ConfirmModal
+        isOpen={!!materialToDelete}
+        onClose={() => setMaterialToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Material?"
+        message={
+          <>
+            Are you sure you want to delete <span className="font-bold text-on-surface break-all">"{materialToDelete?.title}"</span>? This action cannot be undone.
+          </>
+        }
+        confirmText="Delete"
+        isLoading={isDeleting}
+      />
 
       {showAllTags && (
         <SeeAllTagsModal

@@ -18,6 +18,21 @@ class IsAdminOrReadOnly(permissions.BasePermission):
             return request.user and request.user.is_authenticated
         return request.user and (request.user.is_staff or request.user.is_superuser)
 
+class IsSuperUserOrStaff(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser))
+
+def delete_question_with_audit(question, user):
+    snapshot = f"{question.exam.name} {question.year} {question.subject.name} - Q{question.number}"
+    QuestionAuditLog.objects.filter(question=question, question_snapshot='').update(question_snapshot=snapshot)
+    QuestionAuditLog.objects.create(
+        question=question,
+        question_snapshot=snapshot,
+        user=user,
+        action='deleted'
+    )
+    question.delete()
+
 class ExamViewSet(viewsets.ModelViewSet):
     queryset = Exam.objects.all().order_by('name')
     serializer_class = ExamSerializer
@@ -72,7 +87,49 @@ class UploaderQuestionViewSet(viewsets.ModelViewSet):
         if instance.status == 'approved':
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Approved questions cannot be deleted.")
-        instance.delete()
+        delete_question_with_audit(instance, self.request.user)
+
+class AdminQuestionViewSet(viewsets.ModelViewSet):
+    serializer_class = PastQuestionSerializer
+    permission_classes = [IsSuperUserOrStaff]
+
+    def get_queryset(self):
+        queryset = PastQuestion.objects.select_related('exam', 'subject', 'uploaded_by').prefetch_related('options').all()
+
+        exam = self.request.query_params.get('exam')
+        subject = self.request.query_params.get('subject')
+        year = self.request.query_params.get('year')
+        status_param = self.request.query_params.get('status')
+        uploaded_by = self.request.query_params.get('uploaded_by')
+
+        if exam:
+            queryset = queryset.filter(exam_id=exam)
+        if subject:
+            queryset = queryset.filter(subject_id=subject)
+        if year:
+            queryset = queryset.filter(year=year)
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        if uploaded_by:
+            queryset = queryset.filter(uploaded_by_id=uploaded_by)
+
+        return queryset
+
+    def perform_destroy(self, instance):
+        delete_question_with_audit(instance, self.request.user)
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        ids = request.data.get('ids', [])
+        if not isinstance(ids, list) or not ids:
+            return Response({'error': 'A non-empty list of question IDs is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        questions = list(PastQuestion.objects.select_related('exam', 'subject').filter(id__in=ids))
+        deleted_count = len(questions)
+        for q in questions:
+            delete_question_with_audit(q, request.user)
+
+        return Response({'deleted_count': deleted_count}, status=status.HTTP_200_OK)
 
 class ValidatorQuestionViewSet(viewsets.ModelViewSet):
     serializer_class = PastQuestionSerializer
@@ -196,13 +253,15 @@ class AnalyticsSummaryView(APIView):
             total_approved=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='approved')),
             total_changes_requested=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='changes_requested')),
             total_edited=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='edited')),
+            total_deleted=Count('questionauditlog', filter=audit_filter & Q(questionauditlog__action='deleted')),
         )
         
         users = users.filter(
             Q(total_uploaded__gt=0) | 
             Q(total_approved__gt=0) | 
             Q(total_changes_requested__gt=0) | 
-            Q(total_edited__gt=0)
+            Q(total_edited__gt=0) |
+            Q(total_deleted__gt=0)
         )
         
         users = users.order_by('-total_approved', '-total_uploaded')
@@ -220,6 +279,7 @@ class AnalyticsSummaryView(APIView):
                 'total_approved': u.total_approved,
                 'total_changes_requested': u.total_changes_requested,
                 'total_edited': u.total_edited,
+                'total_deleted': u.total_deleted,
             })
             
         return Response(data)
@@ -249,12 +309,16 @@ class UserAnalyticsDetailView(APIView):
         
         data = []
         for log in logs:
+            question_info = log.question_snapshot
+            if not question_info and log.question:
+                question_info = f"{log.question.exam.name} {log.question.year} {log.question.subject.name} - Q{log.question.number}"
             data.append({
                 'id': log.id,
                 'action': log.action,
                 'timestamp': log.timestamp,
                 'notes': log.notes,
-                'question_info': f"{log.question.exam.name} {log.question.year} {log.question.subject.name} - Q{log.question.number}"
+                'question_info': question_info or 'Deleted Question'
             })
             
         return Response(data)
+

@@ -22,15 +22,24 @@ class PastQuestionSerializer(serializers.ModelSerializer):
     options = QuestionOptionSerializer(many=True)
     exam_name = serializers.CharField(source='exam.name', read_only=True)
     subject_name = serializers.CharField(source='subject.name', read_only=True)
+    uploaded_by_email = serializers.CharField(source='uploaded_by.email', read_only=True)
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    def get_uploaded_by_name(self, obj):
+        if not obj.uploaded_by:
+            return ''
+        name = f"{obj.uploaded_by.first_name} {obj.uploaded_by.last_name}".strip()
+        return name or obj.uploaded_by.email
 
     class Meta:
         model = PastQuestion
         fields = [
             'id', 'exam', 'exam_name', 'subject', 'subject_name', 'year', 'number', 
             'question_text', 'has_diagram', 'image', 'status', 'validator_feedback', 
+            'uploaded_by', 'uploaded_by_email', 'uploaded_by_name',
             'options', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['status', 'validator_feedback']
+        read_only_fields = ['status', 'validator_feedback', 'uploaded_by']
 
     def validate_question_text(self, value):
         if not value or not value.strip():

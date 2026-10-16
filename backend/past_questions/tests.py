@@ -216,3 +216,80 @@ class AnalyticsTests(TestCase):
         self.assertEqual(len(res_detail.data), 1)
         self.assertEqual(res_detail.data[0]['action'], 'uploaded')
         self.assertIn('WAEC 2021 Math - Q1', res_detail.data[0]['question_info'])
+
+    def test_admin_can_delete_approved_question_and_preserves_audit_logs(self):
+        # 1. Uploader uploads a question
+        self.client.force_authenticate(user=self.uploader)
+        res = self.client.post('/api/past-questions/uploader/questions/', {
+            'exam': self.exam.id,
+            'subject': self.subject.id,
+            'year': 2022,
+            'number': 5,
+            'question_text': 'Approved question to be deleted by admin',
+            'options': [
+                {'letter': 'A', 'text': 'Opt A', 'is_correct': None},
+                {'letter': 'B', 'text': 'Opt B', 'is_correct': None},
+            ]
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        q_id = res.data['id']
+
+        # 2. Validator approves it
+        self.client.force_authenticate(user=self.validator)
+        res_val = self.client.post(f'/api/past-questions/validator/questions/{q_id}/validate/', {
+            'action': 'approve'
+        }, format='json')
+        self.assertEqual(res_val.status_code, status.HTTP_200_OK)
+
+        # 3. Admin deletes the approved question
+        self.client.force_authenticate(user=self.admin)
+        res_del = self.client.delete(f'/api/past-questions/admin/questions/{q_id}/')
+        self.assertEqual(res_del.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(PastQuestion.objects.filter(id=q_id).exists())
+
+        # 4. Historical upload & approval counts remain intact, and admin has 1 deleted action
+        res_summary = self.client.get('/api/past-questions/analytics/summary/')
+        self.assertEqual(res_summary.status_code, status.HTTP_200_OK)
+        summary = res_summary.data
+
+        uploader_stat = next(s for s in summary if s['email'] == 'up2@test.com')
+        self.assertEqual(uploader_stat['total_uploaded'], 1)
+
+        validator_stat = next(s for s in summary if s['email'] == 'val2@test.com')
+        self.assertEqual(validator_stat['total_approved'], 1)
+
+        admin_stat = next(s for s in summary if s['email'] == 'admin2@test.com')
+        self.assertEqual(admin_stat['total_deleted'], 1)
+
+        # 5. Detailed activity logs still preserve question_info after question deletion
+        res_up_detail = self.client.get(f'/api/past-questions/analytics/user/{self.uploader.id}/')
+        self.assertEqual(res_up_detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_up_detail.data[0]['question_info'], 'WAEC 2022 Math - Q5')
+
+        res_admin_detail = self.client.get(f'/api/past-questions/analytics/user/{self.admin.id}/')
+        self.assertEqual(res_admin_detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_admin_detail.data[0]['action'], 'deleted')
+        self.assertEqual(res_admin_detail.data[0]['question_info'], 'WAEC 2022 Math - Q5')
+
+    def test_admin_bulk_delete_and_non_admin_forbidden(self):
+        q1 = PastQuestion.objects.create(exam=self.exam, subject=self.subject, year=2023, number=1, question_text="Q1", status='pending', uploaded_by=self.uploader)
+        q2 = PastQuestion.objects.create(exam=self.exam, subject=self.subject, year=2023, number=2, question_text="Q2", status='approved', uploaded_by=self.uploader)
+
+        # Non-admin (uploader) is forbidden from admin endpoints
+        self.client.force_authenticate(user=self.uploader)
+        self.assertEqual(self.client.get('/api/past-questions/admin/questions/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.delete(f'/api/past-questions/admin/questions/{q1.id}/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.post('/api/past-questions/admin/questions/bulk_delete/', {'ids': [q1.id]}, format='json').status_code, status.HTTP_403_FORBIDDEN)
+
+        # Admin can filter and bulk delete
+        self.client.force_authenticate(user=self.admin)
+        res_list = self.client.get(f'/api/past-questions/admin/questions/?status=approved&uploaded_by={self.uploader.id}')
+        self.assertEqual(res_list.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_list.data), 1)
+        self.assertEqual(res_list.data[0]['id'], q2.id)
+
+        res_bulk = self.client.post('/api/past-questions/admin/questions/bulk_delete/', {'ids': [q1.id, q2.id]}, format='json')
+        self.assertEqual(res_bulk.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_bulk.data['deleted_count'], 2)
+        self.assertEqual(PastQuestion.objects.count(), 0)
+

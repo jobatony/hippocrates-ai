@@ -63,8 +63,10 @@ class QuestionAuditLog(models.Model):
         ('edited', 'Edited'),
         ('approved', 'Approved'),
         ('changes_requested', 'Changes Requested'),
+        ('deleted', 'Deleted'),
     ]
-    question = models.ForeignKey(PastQuestion, on_delete=models.CASCADE, related_name='audit_logs')
+    question = models.ForeignKey(PastQuestion, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    question_snapshot = models.CharField(max_length=255, blank=True, default='')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -73,5 +75,11 @@ class QuestionAuditLog(models.Model):
     class Meta:
         ordering = ['-timestamp']
 
+    def save(self, *args, **kwargs):
+        if self.question and not self.question_snapshot:
+            self.question_snapshot = f"{self.question.exam.name} {self.question.year} {self.question.subject.name} - Q{self.question.number}"
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.user.username} - {self.action} - {self.question}"
+        return f"{self.user.username} - {self.action} - {self.question_snapshot or self.question}"
+

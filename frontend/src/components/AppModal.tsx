@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface AppModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface AppModalProps {
   children: React.ReactNode;
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
   hideCloseButton?: boolean;
+  closeButtonAriaLabel?: string;
   heightClass?: string;
   centerOnMobile?: boolean;
   noPadding?: boolean;
@@ -20,10 +22,12 @@ export const AppModal: React.FC<AppModalProps> = ({
   children,
   maxWidth = 'sm',
   hideCloseButton = false,
+  closeButtonAriaLabel = 'Close modal',
   heightClass = '',
   centerOnMobile = false,
   noPadding = false,
 }) => {
+  useBodyScrollLock(isOpen);
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -55,7 +59,11 @@ export const AppModal: React.FC<AppModalProps> = ({
           <div className={`flex justify-between items-center shrink-0 ${noPadding ? 'p-lg border-b border-outline-variant' : 'mb-lg'}`}>
             {title ? <h2 className="font-headline-md text-on-surface">{title}</h2> : <div />}
             {!hideCloseButton && (
-              <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface p-1 rounded hover:bg-surface-container-high transition-colors">
+              <button
+                onClick={onClose}
+                aria-label={closeButtonAriaLabel}
+                className="text-on-surface-variant hover:text-on-surface p-1 rounded hover:bg-surface-container-high transition-colors"
+              >
                 <X size={20} />
               </button>
             )}
